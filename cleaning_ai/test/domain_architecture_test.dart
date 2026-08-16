@@ -167,12 +167,12 @@ void main() {
       expect(AppState.instance.completionHistory.first.status, TaskStatus.completed);
     });
 
-    test('ScannerSession reset clears photo state and resets room pointers', () {
+    test('ScannerSession reset clears photo state and resets room pointers', () async {
       final session = ScannerSession();
       session.currentRoom.addPhoto(CapturedImage(filePath: '/tmp/test.jpg').toXFile());
       expect(session.currentRoom.photoCount, 1);
 
-      session.resetSession();
+      await session.resetSession();
 
       expect(session.currentRoom.photoCount, 0);
       expect(session.currentRoomIndex, 0);

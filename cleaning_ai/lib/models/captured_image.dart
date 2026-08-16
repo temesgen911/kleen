@@ -1,6 +1,21 @@
 import 'package:camera/camera.dart';
 
-/// Represents a photo captured during a room scanning session with full metadata.
+/// Provenance of how the room image was captured/imported.
+enum ImageSourceType {
+  camera,
+  gallery;
+
+  String get displayName {
+    switch (this) {
+      case ImageSourceType.camera:
+        return 'Camera';
+      case ImageSourceType.gallery:
+        return 'Photo Library';
+    }
+  }
+}
+
+/// Represents a photo captured or imported during a room scanning session with full metadata.
 class CapturedImage {
   final String id;
   final String filePath;
@@ -9,6 +24,9 @@ class CapturedImage {
   final int orderIndex;
   final double? width;
   final double? height;
+  final int? orientationDegrees;
+  final int? fileSizeBytes;
+  final ImageSourceType sourceType;
   final String? thumbnailPath;
   final String? cloudReference;
 
@@ -20,6 +38,9 @@ class CapturedImage {
     this.orderIndex = 0,
     this.width,
     this.height,
+    this.orientationDegrees = 0,
+    this.fileSizeBytes,
+    this.sourceType = ImageSourceType.camera,
     this.thumbnailPath,
     this.cloudReference,
   })  : id = id ?? 'img_${DateTime.now().millisecondsSinceEpoch}_$orderIndex',
@@ -29,6 +50,11 @@ class CapturedImage {
     XFile file, {
     String roomName = 'Living Room',
     int orderIndex = 0,
+    double? width,
+    double? height,
+    int? orientationDegrees,
+    int? fileSizeBytes,
+    ImageSourceType sourceType = ImageSourceType.camera,
   }) {
     return CapturedImage(
       id: 'img_${DateTime.now().microsecondsSinceEpoch}_$orderIndex',
@@ -36,7 +62,26 @@ class CapturedImage {
       roomName: roomName,
       orderIndex: orderIndex,
       capturedAt: DateTime.now(),
+      width: width,
+      height: height,
+      orientationDegrees: orientationDegrees ?? 0,
+      fileSizeBytes: fileSizeBytes,
+      sourceType: sourceType,
     );
+  }
+
+  bool get isPortrait {
+    if (width != null && height != null) {
+      return height! >= width!;
+    }
+    return true;
+  }
+
+  double get aspectRatio {
+    if (width != null && height != null && height! > 0) {
+      return width! / height!;
+    }
+    return 3.0 / 4.0;
   }
 
   XFile toXFile() => XFile(filePath);
@@ -49,6 +94,9 @@ class CapturedImage {
     int? orderIndex,
     double? width,
     double? height,
+    int? orientationDegrees,
+    int? fileSizeBytes,
+    ImageSourceType? sourceType,
     String? thumbnailPath,
     String? cloudReference,
   }) {
@@ -60,6 +108,9 @@ class CapturedImage {
       orderIndex: orderIndex ?? this.orderIndex,
       width: width ?? this.width,
       height: height ?? this.height,
+      orientationDegrees: orientationDegrees ?? this.orientationDegrees,
+      fileSizeBytes: fileSizeBytes ?? this.fileSizeBytes,
+      sourceType: sourceType ?? this.sourceType,
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       cloudReference: cloudReference ?? this.cloudReference,
     );
@@ -74,6 +125,9 @@ class CapturedImage {
       'orderIndex': orderIndex,
       'width': width,
       'height': height,
+      'orientationDegrees': orientationDegrees,
+      'fileSizeBytes': fileSizeBytes,
+      'sourceType': sourceType.name,
       'thumbnailPath': thumbnailPath,
       'cloudReference': cloudReference,
     };
@@ -88,6 +142,12 @@ class CapturedImage {
       orderIndex: json['orderIndex'] as int? ?? 0,
       width: (json['width'] as num?)?.toDouble(),
       height: (json['height'] as num?)?.toDouble(),
+      orientationDegrees: json['orientationDegrees'] as int? ?? 0,
+      fileSizeBytes: json['fileSizeBytes'] as int?,
+      sourceType: ImageSourceType.values.firstWhere(
+        (s) => s.name == json['sourceType'],
+        orElse: () => ImageSourceType.camera,
+      ),
       thumbnailPath: json['thumbnailPath'] as String?,
       cloudReference: json['cloudReference'] as String?,
     );

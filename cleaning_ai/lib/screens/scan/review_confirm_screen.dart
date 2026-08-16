@@ -41,13 +41,15 @@ class _ReviewConfirmScreenState extends State<ReviewConfirmScreen> {
                     .copyWith(color: AppColors.textMuted)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx); // close dialog
-              // Pop all the way back to ScannerScreen
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const ScannerScreen()),
-                (route) => route.isFirst,
-              );
+              await widget.session.resetSession();
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const ScannerScreen()),
+                  (route) => route.isFirst,
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentOrange,

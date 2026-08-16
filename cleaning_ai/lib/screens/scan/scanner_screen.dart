@@ -1,16 +1,22 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../models/captured_image.dart';
+import '../../models/scanner_session.dart';
+import '../../services/camera_service.dart';
+import '../../services/image_storage_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
-import '../../models/scanner_session.dart';
-import 'widgets/scanner_header.dart';
-import 'widgets/step_progress.dart';
-import 'widgets/scanner_frame.dart';
 import 'widgets/camera_controls.dart';
 import 'widgets/scan_status_card.dart';
+import 'widgets/scanner_frame.dart';
+import 'widgets/scanner_header.dart';
+import 'widgets/step_progress.dart';
 
 class ScannerScreen extends StatefulWidget {
-  const ScannerScreen({super.key});
+  final ScannerSession? session;
+
+  const ScannerScreen({super.key, this.session});
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -18,66 +24,39 @@ class ScannerScreen extends StatefulWidget {
 
 class _ScannerScreenState extends State<ScannerScreen>
     with WidgetsBindingObserver {
-  CameraController? _cameraController;
-  final ScannerSession _session = ScannerSession();
-  bool _isCameraInitialized = false;
+  late final CameraService _cameraService;
+  late final ScannerSession _session;
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
+    _session = widget.session ?? ScannerSession();
+    _cameraService = CameraService()..addListener(_onCameraStateChanged);
     WidgetsBinding.instance.addObserver(this);
-    _initializeCamera();
+    _cameraService.initialize();
   }
 
-  Future<void> _initializeCamera() async {
-    try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) return;
-
-      final rearCamera = cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.back,
-        orElse: () => cameras.first,
-      );
-
-      _cameraController = CameraController(
-        rearCamera,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-
-      await _cameraController!.initialize();
-      if (mounted) {
-        setState(() {
-          _isCameraInitialized = true;
-        });
-      }
-    } catch (e) {
-      debugPrint("Camera initialization failed: $e");
-    }
+  void _onCameraStateChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _cameraController?.dispose();
+    _cameraService.removeListener(_onCameraStateChanged);
+    _cameraService.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final CameraController? cameraController = _cameraController;
-    if (cameraController == null || !cameraController.value.isInitialized) {
-      return;
-    }
-
-    if (state == AppLifecycleState.inactive) {
-      cameraController.dispose();
-    } else if (state == AppLifecycleState.resumed) {
-      _initializeCamera();
-    }
+    _cameraService.handleAppLifecycleState(state);
   }
 
   Future<void> _capturePhoto() async {
+    if (_isProcessing) return;
     final currentRoom = _session.currentRoom;
     if (currentRoom.photoCount >= 3) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,30 +75,199 @@ class _ScannerScreenState extends State<ScannerScreen>
       return;
     }
 
-    // Fallback for iOS Simulator where no camera is available
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      debugPrint("Camera not initialized. Simulating capture for testing...");
+    setState(() => _isProcessing = true);
+
+    try {
+      String sourcePath;
+
+      if (_cameraService.isReady) {
+        final xfile = await _cameraService.takePicture();
+        if (xfile == null) {
+          setState(() => _isProcessing = false);
+          return;
+        }
+        sourcePath = xfile.path;
+      } else {
+        // Fallback for Simulator without hardware camera: generate a persistent test file
+        final roomDir = await ImageStorageService.instance.getRoomDirectory(
+          sessionId: _session.sessionId,
+          roomId: currentRoom.id,
+        );
+        final simFile = File(
+          '${roomDir.path}/sim_test_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
+        await simFile.writeAsBytes(const [
+          0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00,
+          0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xDB,
+          0x00, 0x43, 0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07,
+          0x07, 0x07, 0x09, 0x09, 0x08, 0x0A, 0x0C, 0x14, 0x0D, 0x0C, 0x0B,
+          0x0B, 0x0C, 0x19, 0x12, 0x13, 0x0F, 0x14, 0x1D, 0x1A, 0x1F, 0x1E,
+          0x1D, 0x1A, 0x1C, 0x1C, 0x20, 0x24, 0x2E, 0x27, 0x20, 0x22, 0x2C,
+          0x23, 0x1C, 0x1C, 0x28, 0x37, 0x29, 0x2C, 0x30, 0x31, 0x34, 0x34,
+          0x34, 0x1F, 0x27, 0x39, 0x3D, 0x38, 0x32, 0x3C, 0x2E, 0x33, 0x34,
+          0x32, 0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01,
+          0x01, 0x11, 0x00, 0xFF, 0xC4, 0x00, 0x1F, 0x00, 0x00, 0x01, 0x05,
+          0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+          0x09, 0x0A, 0x0B, 0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00,
+          0x3F, 0x00, 0x7F, 0x00, 0xFF, 0xD9
+        ]);
+        sourcePath = simFile.path;
+      }
+
+      final capturedImage =
+          await ImageStorageService.instance.persistAndNormalizeImage(
+        sourceFilePath: sourcePath,
+        sessionId: _session.sessionId,
+        roomId: currentRoom.id,
+        roomName: currentRoom.name,
+        orderIndex: currentRoom.photoCount,
+        sourceType: ImageSourceType.camera,
+      );
+
       setState(() {
-        currentRoom.photos.add(XFile('')); // Dummy file for simulator testing
+        currentRoom.addCapturedImage(capturedImage);
       });
+    } catch (e) {
+      debugPrint('[ScannerScreen] Error during capture: $e');
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    if (_isProcessing) return;
+    final currentRoom = _session.currentRoom;
+    if (currentRoom.photoCount >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.secondaryPurple,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Text(
+            'Maximum 3 photos reached for ${currentRoom.name}.',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
       return;
     }
 
-    if (_cameraController!.value.isTakingPicture) return;
-
     try {
-      final XFile photo = await _cameraController!.takePicture();
-      debugPrint("Photo captured for ${currentRoom.name}: ${photo.path}");
+      final XFile? picked =
+          await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return;
+
+      setState(() => _isProcessing = true);
+
+      final capturedImage =
+          await ImageStorageService.instance.persistAndNormalizeImage(
+        sourceFilePath: picked.path,
+        sessionId: _session.sessionId,
+        roomId: currentRoom.id,
+        roomName: currentRoom.name,
+        orderIndex: currentRoom.photoCount,
+        sourceType: ImageSourceType.gallery,
+      );
 
       setState(() {
-        currentRoom.photos.add(photo);
+        currentRoom.addCapturedImage(capturedImage);
       });
     } catch (e) {
-      debugPrint("Failed to capture photo: $e");
-      setState(() {
-        currentRoom.photos.add(XFile(''));
-      });
+      debugPrint('[ScannerScreen] Error picking from gallery: $e');
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
+  }
+
+  void _showTipsDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1F2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.lightbulb_outline,
+                    color: AppColors.primaryTeal, size: 22),
+                const SizedBox(width: 10),
+                Text('Room Scanning Tips', style: AppTypography.heading2),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildTipRow(
+              icon: Icons.wb_sunny_outlined,
+              title: 'Good lighting',
+              desc:
+                  'Turn on room lights or open blinds for high object recognition accuracy.',
+            ),
+            const SizedBox(height: 12),
+            _buildTipRow(
+              icon: Icons.crop_rotate,
+              title: 'Opposite angles',
+              desc:
+                  'Take 2–3 photos from opposite room corners to capture all surfaces.',
+            ),
+            const SizedBox(height: 12),
+            _buildTipRow(
+              icon: Icons.layers_outlined,
+              title: 'Cover all surfaces',
+              desc:
+                  'Include tables, rugs, counters, shelves, and major electronics.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTipRow({
+    required IconData icon,
+    required String title,
+    required String desc,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.primaryTeal.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.primaryTeal, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                desc,
+                style: AppTypography.bodySmall
+                    .copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   void _onNextRoom() {
@@ -400,15 +548,16 @@ class _ScannerScreenState extends State<ScannerScreen>
                 ),
                 const SizedBox(height: 4),
 
-                // Scanner Frame
+                // Scanner Frame with Live Camera / Fallback
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Center(
                       child: ScannerFrame(
-                        cameraController: _isCameraInitialized
-                            ? _cameraController
-                            : null,
+                        cameraController: _cameraService.controller,
+                        cameraStatus: _cameraService.status,
+                        errorMessage: _cameraService.errorMessage,
+                        onRetryPermission: () => _cameraService.initialize(),
                       ),
                     ),
                   ),
@@ -419,6 +568,9 @@ class _ScannerScreenState extends State<ScannerScreen>
                 // Controls and Status
                 CameraControls(
                   onCapture: _capturePhoto,
+                  onGalleryTap: _pickFromGallery,
+                  onTipsTap: _showTipsDialog,
+                  isCaptureDisabled: currentPhotos >= 3 || _isProcessing,
                   captureProgress: (currentPhotos / 3.0).clamp(0.0, 1.0),
                 ),
                 const SizedBox(height: 8),

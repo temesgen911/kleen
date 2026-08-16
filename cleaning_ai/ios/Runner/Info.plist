@@ -3,7 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Cleaning AI needs camera access to scan your room.</string>
+	<string>Cleaning AI needs camera access to scan your room and detect cleanable items.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Cleaning AI needs photo library access to import room photos for cleaning analysis.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

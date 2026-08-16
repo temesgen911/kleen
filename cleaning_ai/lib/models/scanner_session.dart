@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'captured_image.dart';
 import 'confirmed_item.dart';
 import 'cleaning_requirement.dart';
+import '../services/image_storage_service.dart';
 
 // ─── Room Data ───────────────────────────────────────────────────────────────
 
@@ -19,7 +20,7 @@ class RoomData {
     List<CapturedImage>? images,
     List<XFile>? photos,
   })  : id = id ??
-            'room_${DateTime.now().millisecondsSinceEpoch}_${name.toLowerCase().replaceAll(' ', '_')}',
+            'room_${name.toLowerCase().replaceAll(' ', '_')}',
         images = images ??
             (photos?.map((f) => CapturedImage.fromXFile(f, roomName: name)).toList() ??
                 []);
@@ -41,7 +42,28 @@ class RoomData {
     images.add(image);
   }
 
-  void clearPhotos() {
+  Future<bool> removeImage(CapturedImage image) async {
+    final removed = images.remove(image);
+    if (removed) {
+      await ImageStorageService.instance.deleteImage(image);
+    }
+    return removed;
+  }
+
+  Future<CapturedImage?> removeImageById(String imageId) async {
+    final index = images.indexWhere((img) => img.id == imageId);
+    if (index != -1) {
+      final img = images.removeAt(index);
+      await ImageStorageService.instance.deleteImage(img);
+      return img;
+    }
+    return null;
+  }
+
+  Future<void> clearPhotos() async {
+    for (final img in List<CapturedImage>.from(images)) {
+      await ImageStorageService.instance.deleteImage(img);
+    }
     images.clear();
   }
 }
@@ -129,9 +151,13 @@ class ReviewItem {
     if (frequency.contains('14')) days = 14;
 
     int mins = 2;
-    if (cleaningAction.contains('Vacuum / Mop')) mins = 6;
-    else if (cleaningAction.contains('Vacuum')) mins = 4;
-    else if (cleaningAction.contains('Wipe')) mins = 3;
+    if (cleaningAction.contains('Vacuum / Mop')) {
+      mins = 6;
+    } else if (cleaningAction.contains('Vacuum')) {
+      mins = 4;
+    } else if (cleaningAction.contains('Wipe')) {
+      mins = 3;
+    }
 
     return CleaningRequirement(
       itemId: id,
@@ -166,17 +192,21 @@ class ReviewItem {
 // ─── Scanner Session ─────────────────────────────────────────────────────────
 
 class ScannerSession {
+  final String sessionId;
   List<RoomData> rooms;
   int currentRoomIndex;
   List<ReviewItem> reviewItems;
   bool isConfirmed;
 
   ScannerSession({
+    String? sessionId,
     List<RoomData>? rooms,
     this.currentRoomIndex = 0,
     List<ReviewItem>? reviewItems,
     this.isConfirmed = false,
-  })  : rooms = rooms ??
+  })  : sessionId = sessionId ??
+            'scan_${DateTime.now().millisecondsSinceEpoch}',
+        rooms = rooms ??
             [
               RoomData(
                   id: 'living_room', name: 'Living Room', icon: Icons.chair),
@@ -229,13 +259,15 @@ class ScannerSession {
   }
 
   void addRoom(String name, [IconData icon = Icons.door_sliding]) {
-    rooms.add(RoomData(name: name, icon: icon));
+    final id = name.toLowerCase().replaceAll(' ', '_');
+    rooms.add(RoomData(id: id, name: name, icon: icon));
   }
 
-  void resetSession() {
+  Future<void> resetSession() async {
     for (final room in rooms) {
-      room.clearPhotos();
+      await room.clearPhotos();
     }
+    await ImageStorageService.instance.deleteSessionImages(sessionId);
     currentRoomIndex = 0;
     reviewItems = List.from(mockReviewItems);
     isConfirmed = false;
