@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cleaning_ai/main.dart';
 import 'package:cleaning_ai/models/app_state.dart';
 import 'package:cleaning_ai/models/cleaning_plan.dart';
+import 'package:cleaning_ai/models/cleaning_streak.dart';
 import 'package:cleaning_ai/models/scanner_session.dart';
 import 'package:cleaning_ai/services/date_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -113,6 +114,7 @@ void main() {
       expect(AppState.instance.streak.isFirstStreak, isTrue);
 
       // 6. Tap "Back to Home"
+      await tester.ensureVisible(find.text('Back to Home'));
       await tester.tap(find.text('Back to Home'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
