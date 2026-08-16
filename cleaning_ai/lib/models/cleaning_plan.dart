@@ -38,11 +38,15 @@ enum WeekDay {
 enum TaskStatus {
   pending,
   completed,
-  skipped;
+  skipped,
+  missed,
+  rescheduled;
 
   bool get isCompleted => this == TaskStatus.completed;
   bool get isSkipped => this == TaskStatus.skipped;
   bool get isPending => this == TaskStatus.pending;
+  bool get isMissed => this == TaskStatus.missed;
+  bool get isRescheduled => this == TaskStatus.rescheduled;
 }
 
 class PlanTask {
@@ -64,6 +68,7 @@ class PlanTask {
 
   bool get isCompleted => status == TaskStatus.completed;
   bool get isSkipped => status == TaskStatus.skipped;
+  bool get isPending => status == TaskStatus.pending;
 
   PlanTask copyWith({
     String? id,
@@ -114,6 +119,16 @@ class CleaningPlan extends ChangeNotifier {
     }
   }
 
+  bool isTaskCompleted(String taskId) {
+    final task = tasks.where((t) => t.id == taskId).firstOrNull;
+    return task?.isCompleted ?? false;
+  }
+
+  bool isTaskSkipped(String taskId) {
+    final task = tasks.where((t) => t.id == taskId).firstOrNull;
+    return task?.isSkipped ?? false;
+  }
+
   /// Adjusts all task estimated times by [ratio] based on actual cleaning pace.
   void applyPacingAdjustment(double ratio) {
     if (ratio <= 0) return;
@@ -142,17 +157,16 @@ class CleaningPlan extends ChangeNotifier {
     final updatedTask = task.copyWith(scheduledDay: newDay);
 
     if (insertIndex != null) {
-        // Find absolute index in the main list corresponding to the insertIndex in the newDay list
-        final dayTasks = getTasksForDay(newDay);
-        if (insertIndex >= dayTasks.length) {
-            tasks.add(updatedTask);
-        } else {
-           final targetTask = dayTasks[insertIndex];
-           final targetGlobalIndex = tasks.indexWhere((t) => t.id == targetTask.id);
-           tasks.insert(targetGlobalIndex, updatedTask);
-        }
-    } else {
+      final dayTasks = getTasksForDay(newDay);
+      if (insertIndex >= dayTasks.length) {
         tasks.add(updatedTask);
+      } else {
+        final targetTask = dayTasks[insertIndex];
+        final targetGlobalIndex = tasks.indexWhere((t) => t.id == targetTask.id);
+        tasks.insert(targetGlobalIndex, updatedTask);
+      }
+    } else {
+      tasks.add(updatedTask);
     }
     notifyListeners();
   }
@@ -181,7 +195,6 @@ class CleaningPlan extends ChangeNotifier {
       return 2;
     }
 
-    // Attempt a rough distribution across the week for the mock
     final dayCycle = [
       WeekDay.monday,
       WeekDay.thursday,
@@ -192,57 +205,65 @@ class CleaningPlan extends ChangeNotifier {
     ];
 
     for (int i = 0; i < confirmedItems.length; i++) {
-        final item = confirmedItems[i];
-        final day = dayCycle[i % dayCycle.length];
-        generatedTasks.add(PlanTask(
-            id: 'task_${item.id}',
-            sourceItem: item,
-            estimatedMinutes: estimateMinutes(item.cleaningAction),
-            scheduledDay: day,
-        ));
+      final item = confirmedItems[i];
+      final day = dayCycle[i % dayCycle.length];
+      generatedTasks.add(PlanTask(
+        id: 'task_${item.id}',
+        sourceItem: item,
+        estimatedMinutes: estimateMinutes(item.cleaningAction),
+        scheduledDay: day,
+      ));
     }
 
-    // Force a specific mock for testing if it matches our items, otherwise use generic distribution
-    if (confirmedItems.any((i) => i.name == 'Coffee Table') && confirmedItems.any((i) => i.name == 'Area Rug')) {
-       return _buildSpecificMockPlan(confirmedItems);
+    if (confirmedItems.any((i) => i.name == 'Coffee Table') &&
+        confirmedItems.any((i) => i.name == 'Area Rug')) {
+      return _buildSpecificMockPlan(confirmedItems);
     }
 
     return CleaningPlan(tasks: generatedTasks);
   }
 
   static CleaningPlan _buildSpecificMockPlan(List<ReviewItem> items) {
-      final List<PlanTask> tasks = [];
-      int getMinutes(String action) {
-          if (action.contains('Vacuum / Mop')) return 6;
-          if (action.contains('Vacuum')) return 4;
-          if (action.contains('Wipe')) return 3;
-          if (action.contains('Dust')) return 2;
-          return 2;
-      }
+    final List<PlanTask> tasks = [];
+    int getMinutes(String action) {
+      if (action.contains('Vacuum / Mop')) return 6;
+      if (action.contains('Vacuum')) return 4;
+      if (action.contains('Wipe')) return 3;
+      if (action.contains('Dust')) return 2;
+      return 2;
+    }
 
-      void assign(String name, WeekDay day, [int? customMins]) {
-          final item = items.firstWhere((i) => i.name == name, orElse: () => ReviewItem(name: name, category: ItemCategory.other, cleaningAction: 'Clean', frequency: '7 days'));
-          tasks.add(PlanTask(
-              id: 'mock_$name',
-              sourceItem: item,
-              estimatedMinutes: customMins ?? getMinutes(item.cleaningAction),
-              scheduledDay: day
-          ));
-      }
+    void assign(String name, WeekDay day, [int? customMins]) {
+      final item = items.firstWhere(
+        (i) => i.name == name,
+        orElse: () => ReviewItem(
+          name: name,
+          category: ItemCategory.other,
+          cleaningAction: 'Clean',
+          frequency: '7 days',
+        ),
+      );
+      tasks.add(PlanTask(
+        id: 'mock_$name',
+        sourceItem: item,
+        estimatedMinutes: customMins ?? getMinutes(item.cleaningAction),
+        scheduledDay: day,
+      ));
+    }
 
-      try {
-          assign('Coffee Table', WeekDay.monday, 2);
-          assign('Area Rug', WeekDay.monday, 4);
-          assign('Television', WeekDay.tuesday, 2);
-          assign('House Plant', WeekDay.wednesday, 2);
-          assign('TV Stand', WeekDay.thursday, 2);
-          assign('Windowsill', WeekDay.thursday, 3);
-          assign('Sofa', WeekDay.friday, 4);
-          assign('Hardwood Floor', WeekDay.saturday, 6);
-      } catch (e) {
-          // If items don't match, fallback is handled earlier. This try-catch is just in case.
-      }
+    try {
+      assign('Coffee Table', WeekDay.monday, 2);
+      assign('Area Rug', WeekDay.monday, 4);
+      assign('Television', WeekDay.tuesday, 2);
+      assign('House Plant', WeekDay.wednesday, 2);
+      assign('TV Stand', WeekDay.thursday, 2);
+      assign('Windowsill', WeekDay.thursday, 3);
+      assign('Sofa', WeekDay.friday, 4);
+      assign('Hardwood Floor', WeekDay.saturday, 6);
+    } catch (e) {
+      // Fallback is handled earlier
+    }
 
-      return CleaningPlan(tasks: tasks);
+    return CleaningPlan(tasks: tasks);
   }
 }

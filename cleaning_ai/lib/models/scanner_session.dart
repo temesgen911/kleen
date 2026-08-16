@@ -1,5 +1,8 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'captured_image.dart';
+import 'confirmed_item.dart';
+import 'cleaning_requirement.dart';
 
 // ─── Room Data ───────────────────────────────────────────────────────────────
 
@@ -7,19 +10,40 @@ class RoomData {
   final String id;
   final String name;
   final IconData icon;
-  final List<XFile> photos;
+  final List<CapturedImage> images;
 
   RoomData({
     String? id,
     required this.name,
     this.icon = Icons.chair,
+    List<CapturedImage>? images,
     List<XFile>? photos,
   })  : id = id ??
             'room_${DateTime.now().millisecondsSinceEpoch}_${name.toLowerCase().replaceAll(' ', '_')}',
-        photos = photos ?? [];
+        images = images ??
+            (photos?.map((f) => CapturedImage.fromXFile(f, roomName: name)).toList() ??
+                []);
 
-  int get photoCount => photos.length;
-  bool get hasSufficientPhotos => photos.length >= 2;
+  List<XFile> get photos => images.map((img) => img.toXFile()).toList();
+
+  int get photoCount => images.length;
+  bool get hasSufficientPhotos => images.length >= 2;
+
+  void addPhoto(XFile file) {
+    images.add(CapturedImage.fromXFile(
+      file,
+      roomName: name,
+      orderIndex: images.length,
+    ));
+  }
+
+  void addCapturedImage(CapturedImage image) {
+    images.add(image);
+  }
+
+  void clearPhotos() {
+    images.clear();
+  }
 }
 
 // ─── Item Category ────────────────────────────────────────────────────────────
@@ -44,7 +68,7 @@ enum ItemCategory {
   }
 }
 
-// ─── Review Item ─────────────────────────────────────────────────────────────
+// ─── Review Item (Backwards-compatible UI bridge & ConfirmedItem view) ─────────
 
 class ReviewItem {
   final String id;
@@ -67,6 +91,55 @@ class ReviewItem {
     this.isManuallyAdded = false,
   }) : id = id ??
             '${name.toLowerCase().replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}';
+
+  factory ReviewItem.fromConfirmedItem(
+    ConfirmedItem confirmed, {
+    String cleaningAction = 'Wipe',
+    String frequency = 'Every 7 days',
+  }) {
+    return ReviewItem(
+      id: confirmed.id,
+      name: confirmed.name,
+      roomName: confirmed.roomName,
+      category: confirmed.category,
+      cleaningAction: cleaningAction,
+      frequency: frequency,
+      isConfirmed: confirmed.isConfirmed,
+      isManuallyAdded: confirmed.provenance == ItemProvenance.userAdded,
+    );
+  }
+
+  ConfirmedItem toConfirmedItem() {
+    return ConfirmedItem(
+      id: id,
+      name: name,
+      roomName: roomName,
+      category: category,
+      provenance: isManuallyAdded
+          ? ItemProvenance.userAdded
+          : ItemProvenance.aiDetected,
+      isConfirmed: isConfirmed,
+    );
+  }
+
+  CleaningRequirement toCleaningRequirement() {
+    int days = 7;
+    if (frequency.contains('2')) days = 2;
+    if (frequency.contains('4')) days = 4;
+    if (frequency.contains('14')) days = 14;
+
+    int mins = 2;
+    if (cleaningAction.contains('Vacuum / Mop')) mins = 6;
+    else if (cleaningAction.contains('Vacuum')) mins = 4;
+    else if (cleaningAction.contains('Wipe')) mins = 3;
+
+    return CleaningRequirement(
+      itemId: id,
+      action: cleaningAction,
+      frequencyDays: days,
+      estimatedMinutes: mins,
+    );
+  }
 
   ReviewItem copyWith({
     String? name,
@@ -123,10 +196,19 @@ class ScannerSession {
   List<XFile> get allCapturedPhotos =>
       rooms.expand((r) => r.photos).toList();
 
+  List<CapturedImage> get allCapturedImages =>
+      rooms.expand((r) => r.images).toList();
+
   int get totalCapturedPhotos => allCapturedPhotos.length;
 
   int get confirmedCount => reviewItems.where((i) => i.isConfirmed).length;
   int get totalCount => reviewItems.length;
+
+  List<ConfirmedItem> get confirmedItems =>
+      reviewItems.map((r) => r.toConfirmedItem()).toList();
+
+  List<CleaningRequirement> get cleaningRequirements =>
+      reviewItems.where((r) => r.isConfirmed).map((r) => r.toCleaningRequirement()).toList();
 
   List<ReviewItem> itemsForCategory(ItemCategory category) =>
       reviewItems.where((i) => i.category == category).toList();
@@ -150,7 +232,16 @@ class ScannerSession {
     rooms.add(RoomData(name: name, icon: icon));
   }
 
-  // ─── Mock Data ─────────────────────────────────────────────────────────────
+  void resetSession() {
+    for (final room in rooms) {
+      room.clearPhotos();
+    }
+    currentRoomIndex = 0;
+    reviewItems = List.from(mockReviewItems);
+    isConfirmed = false;
+  }
+
+  // ─── Default Mock Data ─────────────────────────────────────────────────────
   static final List<ReviewItem> mockReviewItems = [
     ReviewItem(
       name: 'Hardwood Floor',
