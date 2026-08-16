@@ -13,12 +13,16 @@ class DailyCompletionScreen extends StatefulWidget {
   final int completedTasksCount;
   final int totalMinutes;
   final CleaningStreak streak;
+  final Duration? actualDuration;
+  final int? plannedMinutes;
 
   const DailyCompletionScreen({
     super.key,
     required this.completedTasksCount,
     required this.totalMinutes,
     required this.streak,
+    this.actualDuration,
+    this.plannedMinutes,
   });
 
   @override
@@ -31,6 +35,9 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
   late final Animation<double> _flameScale;
   late final Animation<double> _contentFade;
   late final Animation<double> _badgeSlide;
+
+  bool _hasAdjustedPlan = false;
+  bool _hasDismissedPacing = false;
 
   @override
   void initState() {
@@ -88,10 +95,64 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
     );
   }
 
+  void _applyPacingAdjustment(double ratio) {
+    final plan = AppState.instance.activePlan;
+    if (plan != null) {
+      plan.applyPacingAdjustment(ratio);
+      setState(() {
+        _hasAdjustedPlan = true;
+      });
+    }
+  }
+
+  String _formatActualDuration(Duration d) {
+    final mins = d.inMinutes;
+    final secs = d.inSeconds.remainder(60);
+    if (mins > 0 && secs > 0) return '${mins}m ${secs}s';
+    if (mins > 0) return '$mins min';
+    return '$secs s';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isFirstStreak = widget.streak.isFirstStreak;
     final currentStreak = widget.streak.currentStreak;
+
+    final plannedMins = widget.plannedMinutes ?? widget.totalMinutes;
+    final actual = widget.actualDuration ?? Duration(minutes: plannedMins);
+    final plannedDuration = Duration(minutes: plannedMins);
+    final diffSeconds = actual.inSeconds - plannedDuration.inSeconds;
+
+    final isSignificantlyFaster = diffSeconds < -20;
+    final isSignificantlyLonger = diffSeconds > 20;
+    final isOnTime = !isSignificantlyFaster && !isSignificantlyLonger;
+
+    final pacingRatio = actual.inSeconds > 0 && plannedDuration.inSeconds > 0
+        ? (actual.inSeconds / plannedDuration.inSeconds)
+        : 1.0;
+
+    String deltaLabel;
+    Color deltaColor;
+    if (isSignificantlyFaster) {
+      final savedSec = -diffSeconds;
+      final sm = savedSec ~/ 60;
+      final ss = savedSec % 60;
+      deltaLabel = sm > 0
+          ? '$sm min ${ss > 0 ? '$ss s ' : ''}faster than plan ⚡'
+          : '$ss s faster than plan ⚡';
+      deltaColor = const Color(0xFF00E676);
+    } else if (isSignificantlyLonger) {
+      final extraSec = diffSeconds;
+      final em = extraSec ~/ 60;
+      final es = extraSec % 60;
+      deltaLabel = em > 0
+          ? '$em min ${es > 0 ? '$es s ' : ''}longer than plan ⏳'
+          : '$es s longer than plan ⏳';
+      deltaColor = const Color(0xFFFF9100);
+    } else {
+      deltaLabel = 'Spot on with the plan estimate! 🎯';
+      deltaColor = AppColors.primaryTeal;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.backgroundStart,
@@ -102,7 +163,7 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
 
           // Warm golden/amber ambient radial aura behind the flame
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.22,
+            top: MediaQuery.of(context).size.height * 0.18,
             left: MediaQuery.of(context).size.width * 0.15,
             child: Container(
               width: 300,
@@ -121,11 +182,11 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
           ),
 
           SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Column(
                 children: [
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
                   // Top Header Tag
                   Container(
@@ -155,7 +216,7 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
                     ),
                   ),
 
-                  const Spacer(flex: 1),
+                  const SizedBox(height: 20),
 
                   // Animated Flame & Streak Counter
                   AnimatedBuilder(
@@ -169,17 +230,17 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
                             StreakFlame(
                               streakCount: currentStreak,
                               isFirstStreak: isFirstStreak,
-                              size: 190,
+                              size: 180,
                             ),
                             Positioned(
-                              bottom: 22,
+                              bottom: 20,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     '$currentStreak',
                                     style: AppTypography.heading1.copyWith(
-                                      fontSize: 48,
+                                      fontSize: 46,
                                       fontWeight: FontWeight.w900,
                                       color: Colors.white,
                                       shadows: [
@@ -216,7 +277,7 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
                     },
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
 
                   // Motivational Typography
                   AnimatedBuilder(
@@ -233,14 +294,14 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
                                     ? 'Your first streak!'
                                     : '$currentStreak days in a row!',
                                 style: AppTypography.heading1.copyWith(
-                                  fontSize: 26,
+                                  fontSize: 24,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Padding(
                                 padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
+                                    const EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
                                   isFirstStreak
                                       ? 'You showed up today. Keep it going tomorrow.'
@@ -248,7 +309,8 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
                                   textAlign: TextAlign.center,
                                   style: AppTypography.bodyMedium.copyWith(
                                     color: AppColors.textSecondary,
-                                    height: 1.4,
+                                    height: 1.35,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ),
@@ -259,12 +321,12 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
                     },
                   ),
 
-                  const Spacer(flex: 1),
+                  const SizedBox(height: 20),
 
-                  // Session Summary Glass Card
+                  // ── Session Summary Glass Card ─────────────────────────────
                   GlassCard(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
+                        horizontal: 18, vertical: 14),
                     baseColor: AppColors.glassWhite,
                     glowColor: AppColors.primaryTeal,
                     child: Row(
@@ -272,12 +334,22 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
                       children: [
                         _buildStatColumn(
                           icon: Icons.timer_outlined,
-                          value: '${widget.totalMinutes} min',
-                          label: 'Cleaned',
+                          value: _formatActualDuration(actual),
+                          label: 'Actual time',
                         ),
                         Container(
                           width: 1,
-                          height: 32,
+                          height: 30,
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                        _buildStatColumn(
+                          icon: Icons.schedule,
+                          value: '$plannedMins min',
+                          label: 'Planned',
+                        ),
+                        Container(
+                          width: 1,
+                          height: 30,
                           color: Colors.white.withValues(alpha: 0.1),
                         ),
                         _buildStatColumn(
@@ -289,9 +361,143 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 14),
 
-                  // Primary Button "Back to Home"
+                  // ── Pacing Insight & Readjustment Card ───────────────────────
+                  if (!_hasDismissedPacing) ...[
+                    GlassCard(
+                      padding: const EdgeInsets.all(16),
+                      borderRadius: 18,
+                      baseColor: AppColors.glassWhite,
+                      glowColor: _hasAdjustedPlan
+                          ? const Color(0xFF00E676)
+                          : deltaColor,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header Tag with Delta
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    _hasAdjustedPlan
+                                        ? Icons.check_circle
+                                        : (isSignificantlyFaster
+                                            ? Icons.bolt
+                                            : Icons.speed),
+                                    color: _hasAdjustedPlan
+                                        ? const Color(0xFF00E676)
+                                        : deltaColor,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'PACING INSIGHT',
+                                    style: AppTypography.label.copyWith(
+                                      color: _hasAdjustedPlan
+                                          ? const Color(0xFF00E676)
+                                          : deltaColor,
+                                      letterSpacing: 1.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: deltaColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(100),
+                                  border: Border.all(
+                                    color: deltaColor.withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Text(
+                                  deltaLabel,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: deltaColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          if (_hasAdjustedPlan) ...[
+                            // Confirmation banner
+                            Row(
+                              children: [
+                                const Icon(Icons.auto_awesome,
+                                    color: Color(0xFF00E676), size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Weekly plan times adjusted to match your actual pace! ✨',
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else ...[
+                            Text(
+                              isSignificantlyFaster
+                                  ? 'You finished faster than scheduled. Would you like to adjust your weekly plan with shorter estimated times?'
+                                  : (isSignificantlyLonger
+                                      ? 'Cleaning took longer than scheduled. Would you like to adjust your weekly plan with more generous task times?'
+                                      : 'Your pace matches the plan perfectly. Keep it going!'),
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                                height: 1.35,
+                              ),
+                            ),
+
+                            if (!isOnTime) ...[
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: PrimaryButton(
+                                      text: 'Adjust plan times',
+                                      icon: Icons.tune,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10),
+                                      onTap: () =>
+                                          _applyPacingAdjustment(pacingRatio),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _hasDismissedPacing = true;
+                                      });
+                                    },
+                                    child: Text(
+                                      'Keep as is',
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // ── Primary Button "Back to Home" ───────────────────────────
                   PrimaryButton(
                     text: 'Back to Home',
                     icon: Icons.arrow_forward,
@@ -315,8 +521,8 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
   }) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.primaryTeal, size: 20),
-        const SizedBox(width: 10),
+        Icon(icon, color: AppColors.primaryTeal, size: 18),
+        const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -325,13 +531,14 @@ class _DailyCompletionScreenState extends State<DailyCompletionScreen>
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
+                fontSize: 13,
               ),
             ),
             Text(
               label,
               style: AppTypography.bodySmall.copyWith(
                 color: AppColors.textSecondary,
-                fontSize: 11,
+                fontSize: 10,
               ),
             ),
           ],

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/app_state.dart';
 import '../../models/cleaning_plan.dart';
@@ -23,6 +24,9 @@ class _CleaningSessionScreenState extends State<CleaningSessionScreen> {
   int _currentIndex = 0;
   final GlobalKey<TaskCompletionBurstState> _burstKey = GlobalKey();
 
+  final Stopwatch _sessionStopwatch = Stopwatch();
+  Timer? _ticker;
+
   @override
   void initState() {
     super.initState();
@@ -36,9 +40,30 @@ class _CleaningSessionScreenState extends State<CleaningSessionScreen> {
     if (firstPendingIndex != -1) {
       _currentIndex = firstPendingIndex;
     }
+
+    _sessionStopwatch.start();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _sessionStopwatch.stop();
+    _ticker?.cancel();
+    super.dispose();
   }
 
   PlanTask get _currentTask => _sessionTasks[_currentIndex];
+
+  int get _plannedTotalMinutes =>
+      _sessionTasks.fold<int>(0, (sum, t) => sum + t.estimatedMinutes);
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
 
   IconData _getIconForTask(PlanTask task) {
     final name = task.sourceItem.name.toLowerCase();
@@ -92,13 +117,14 @@ class _CleaningSessionScreenState extends State<CleaningSessionScreen> {
         _currentIndex++;
       });
     } else {
+      _sessionStopwatch.stop();
+      final actualDuration = _sessionStopwatch.elapsed;
+
       // All tasks for today processed
       final completedCount = _sessionTasks
           .where((t) => AppState.instance.isTaskCompleted(t.id))
           .length;
-      final totalMins = _sessionTasks
-          .where((t) => AppState.instance.isTaskCompleted(t.id))
-          .fold<int>(0, (sum, t) => sum + t.estimatedMinutes);
+      final totalMins = _plannedTotalMinutes;
 
       final streak = await AppState.instance.completeDailyPlan();
 
@@ -111,6 +137,8 @@ class _CleaningSessionScreenState extends State<CleaningSessionScreen> {
             completedTasksCount: completedCount,
             totalMinutes: totalMins > 0 ? totalMins : 1,
             streak: streak,
+            actualDuration: actualDuration,
+            plannedMinutes: totalMins > 0 ? totalMins : 1,
           ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(
@@ -198,7 +226,36 @@ class _CleaningSessionScreenState extends State<CleaningSessionScreen> {
                         ],
                       ),
 
-                      const SizedBox(width: 48), // Balance close button width
+                      // Right side: Live Stopwatch Timer Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color:
+                              AppColors.primaryTeal.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(
+                            color: AppColors.primaryTeal
+                                .withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.timer_outlined,
+                                color: AppColors.primaryTeal, size: 13),
+                            const SizedBox(width: 5),
+                            Text(
+                              _formatDuration(_sessionStopwatch.elapsed),
+                              style: AppTypography.label.copyWith(
+                                color: AppColors.primaryTeal,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
 

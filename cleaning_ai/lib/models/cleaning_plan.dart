@@ -114,6 +114,18 @@ class CleaningPlan extends ChangeNotifier {
     }
   }
 
+  /// Adjusts all task estimated times by [ratio] based on actual cleaning pace.
+  void applyPacingAdjustment(double ratio) {
+    if (ratio <= 0) return;
+    final clampedRatio = ratio.clamp(0.5, 2.0);
+    for (int i = 0; i < tasks.length; i++) {
+      final task = tasks[i];
+      final newMins = (task.estimatedMinutes * clampedRatio).round().clamp(1, 30);
+      tasks[i] = task.copyWith(estimatedMinutes: newMins);
+    }
+    notifyListeners();
+  }
+
   int getMinutesForDay(WeekDay day) {
     return getTasksForDay(day).fold(0, (sum, task) => sum + task.estimatedMinutes);
   }

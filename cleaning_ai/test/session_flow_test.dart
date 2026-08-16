@@ -154,5 +154,49 @@ void main() {
       expect(AppState.instance.streak.totalCompletedDays, 2);
       expect(find.text('2 days in a row!'), findsOneWidget);
     });
+
+    testWidgets('Pacing adjustment updates task minutes proportionally',
+        (WidgetTester tester) async {
+      final task1 = PlanTask(
+        id: 't1',
+        sourceItem: ReviewItem(
+          name: 'Counter',
+          roomName: 'Kitchen',
+          category: ItemCategory.surfaces,
+          cleaningAction: 'Wipe counter',
+          frequency: '7 days',
+        ),
+        estimatedMinutes: 6,
+        scheduledDay: WeekDay.monday,
+      );
+      final plan = CleaningPlan(tasks: [task1]);
+      AppState.instance.setActivePlan(plan);
+
+      // Build DailyCompletionScreen with 3-minute actual duration (faster by 50%)
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DailyCompletionScreen(
+            completedTasksCount: 1,
+            totalMinutes: 6,
+            streak: const CleaningStreak(currentStreak: 1, totalCompletedDays: 1),
+            actualDuration: const Duration(minutes: 3),
+            plannedMinutes: 6,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('PACING INSIGHT'), findsOneWidget);
+      expect(find.textContaining('faster than plan'), findsOneWidget);
+      expect(find.text('Adjust plan times'), findsOneWidget);
+
+      // Tap Adjust plan times
+      await tester.tap(find.text('Adjust plan times'));
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Task minutes should be scaled (6 * 0.5 = 3 mins)
+      expect(plan.tasks.first.estimatedMinutes, 3);
+      expect(find.textContaining('Weekly plan times adjusted'), findsOneWidget);
+    });
   });
 }
