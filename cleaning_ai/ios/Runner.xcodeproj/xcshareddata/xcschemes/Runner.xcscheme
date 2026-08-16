@@ -10,7 +10,7 @@
             ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
             <ActionContent
                title = "Run Prepare Flutter Framework Script"
-               scriptText = "export CONFIGURATION=${CONFIGURATION:-Debug}&#10;export FLUTTER_APPLICATION_PATH=&quot;${PROJECT_DIR}/..&quot;&#10;/bin/sh &quot;$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh&quot; prepare&#10;">
+               scriptText = "/usr/bin/xattr -cr &quot;${PROJECT_DIR}/..&quot; 2&gt;/dev/null || true&#10;export CONFIGURATION=${CONFIGURATION:-Debug}&#10;export FLUTTER_APPLICATION_PATH=&quot;${PROJECT_DIR}/..&quot;&#10;/bin/sh &quot;$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh&quot; prepare&#10;">
                <EnvironmentBuildable>
                   <BuildableReference
                      BuildableIdentifier = "primary"
