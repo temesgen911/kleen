@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown lifespan context."""
-    logger.info("Initializing Cleaning AI Backend...")
+    logger.info("Initializing kleenai Backend...")
     try:
         initialize_firebase()
         logger.info(f"Firebase Admin SDK initialized (Project: {settings.FIREBASE_PROJECT_ID}).")
     except Exception as e:
         logger.warning(f"Firebase Admin SDK deferred initialization: {e}")
     yield
-    logger.info("Cleaning AI Backend shutting down...")
+    logger.info("kleenai Backend shutting down...")
 
 
 app = FastAPI(

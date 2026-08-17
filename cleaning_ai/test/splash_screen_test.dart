@@ -29,7 +29,7 @@ void main() {
   group('Splash Screen Animation & Flow Tests', () {
     testWidgets('SplashScreen renders and transitions to HomeScreen',
         (WidgetTester tester) async {
-      await tester.pumpWidget(const CleaningAIApp());
+      await tester.pumpWidget(const KleenAIApp());
 
       // Should initially display SplashScreen
       expect(find.byType(SplashScreen), findsOneWidget);

@@ -285,7 +285,7 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           content: Text(
-            'Are you sure you want to sign out of Cleaning AI?',
+            'Are you sure you want to sign out of kleenai?',
             style: AppTypography.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),

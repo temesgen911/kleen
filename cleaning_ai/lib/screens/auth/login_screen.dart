@@ -238,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       // App Title & Subtitle
                       Text(
-                        'Welcome to Kleen',
+                        'Welcome to kleenai',
                         textAlign: TextAlign.center,
                         style: AppTypography.titleLarge.copyWith(
                           color: AppColors.textPrimary,

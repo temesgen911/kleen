@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Cleaning AI Backend"
+    PROJECT_NAME: str = "kleenai Backend"
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
 

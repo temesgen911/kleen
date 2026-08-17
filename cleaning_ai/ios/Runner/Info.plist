@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Cleaning AI needs camera access to scan your room and detect cleanable items.</string>
+	<string>kleenai needs camera access to scan your room and detect cleanable items.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Cleaning AI needs photo library access to import room photos for cleaning analysis.</string>
+	<string>kleenai needs photo library access to import room photos for cleaning analysis.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Cleaning Ai</string>
+	<string>kleenai</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>cleaning_ai</string>
+	<string>kleenai</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

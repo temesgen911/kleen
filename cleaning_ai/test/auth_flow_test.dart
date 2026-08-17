@@ -181,7 +181,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Welcome to Kleen'), findsOneWidget);
+      expect(find.text('Welcome to kleenai'), findsOneWidget);
       expect(find.text('Sign In'), findsOneWidget);
       expect(find.text('Create Account'), findsOneWidget);
 
@@ -293,7 +293,7 @@ void main() {
       await tester.tap(find.text('Sign Out'));
       await tester.pump();
 
-      expect(find.text('Are you sure you want to sign out of Cleaning AI?'), findsOneWidget);
+      expect(find.text('Are you sure you want to sign out of kleenai?'), findsOneWidget);
 
       // Confirm sign out
       await tester.tap(find.widgetWithText(ElevatedButton, 'Sign Out'));

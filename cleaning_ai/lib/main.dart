@@ -14,16 +14,16 @@ void main() {
     ),
   );
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  runApp(const CleaningAIApp());
+  runApp(const KleenAIApp());
 }
 
-class CleaningAIApp extends StatelessWidget {
-  const CleaningAIApp({super.key});
+class KleenAIApp extends StatelessWidget {
+  const KleenAIApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Cleaning AI',
+      title: 'kleenai',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: const SplashScreen(),

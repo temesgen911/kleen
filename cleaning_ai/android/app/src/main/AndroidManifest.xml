@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
     <application
-        android:label="cleaning_ai"
+        android:label="kleenai"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
