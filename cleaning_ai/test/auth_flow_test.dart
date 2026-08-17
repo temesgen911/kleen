@@ -13,6 +13,24 @@ import 'package:cleaning_ai/screens/auth/auth_gate.dart';
 import 'package:cleaning_ai/screens/profile/profile_screen.dart';
 import 'package:cleaning_ai/screens/home/home_screen.dart';
 
+AuthStateNotifier _createTestAuthNotifier() {
+  final backendService = BackendUserService(
+    httpClient: MockClient((req) async => http.Response(
+      json.encode({
+        'id': 'test-uuid-123',
+        'firebaseUid': 'test-uid-123',
+        'email': 'emma@example.com',
+        'displayName': 'Emma Watson',
+        'timezone': 'UTC',
+        'createdAt': '2026-08-17T12:00:00.000Z',
+      }),
+      200,
+      headers: {'content-type': 'application/json'},
+    )),
+  );
+  return AuthStateNotifier(backendUserService: backendService);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -156,7 +174,7 @@ void main() {
 
     test('Sign In authenticates existing user and updates state', () async {
       final authService = AuthService();
-      final notifier = AuthStateNotifier(authService: authService);
+      final notifier = _createTestAuthNotifier();
 
       final success = await notifier.signIn(
         email: 'emma.cleaning@example.com',
@@ -168,6 +186,7 @@ void main() {
       expect(notifier.currentUser?.email, 'emma.cleaning@example.com');
 
       notifier.dispose();
+      authService.signOut();
     });
   });
 
@@ -177,7 +196,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
-      final authNotifier = AuthStateNotifier();
+      final authNotifier = _createTestAuthNotifier();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -213,7 +232,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
-      final authNotifier = AuthStateNotifier();
+      final authNotifier = _createTestAuthNotifier();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -258,7 +277,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
-      final authNotifier = AuthStateNotifier();
+      final authNotifier = _createTestAuthNotifier();
 
       await tester.pumpWidget(
         MaterialApp(
@@ -296,7 +315,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
-      final authNotifier = AuthStateNotifier();
+      final authNotifier = _createTestAuthNotifier();
       await authNotifier.signIn(
         email: 'alex@example.com',
         password: 'password123',
