@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/auth_user.dart';
 import '../../services/auth_state_notifier.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';

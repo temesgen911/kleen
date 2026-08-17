@@ -28,6 +28,10 @@ class AppTypography {
         color: AppColors.textPrimary,
       );
 
+  static TextStyle get titleLarge => heading1;
+  static TextStyle get titleMedium => heading2;
+  static TextStyle get titleSmall => heading3;
+
   static TextStyle get bodyLarge => GoogleFonts.manrope(
         fontSize: 16,
         fontWeight: FontWeight.w400,
@@ -45,6 +49,8 @@ class AppTypography {
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
       );
+
+  static TextStyle get caption => bodySmall;
 
   static TextStyle get label => GoogleFonts.manrope(
         fontSize: 11,

@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cleaning_ai/main.dart';
 import 'package:cleaning_ai/screens/splash/splash_screen.dart';
 import 'package:cleaning_ai/screens/splash/cleaning_logo_geometry.dart';
-import 'package:cleaning_ai/screens/home/home_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

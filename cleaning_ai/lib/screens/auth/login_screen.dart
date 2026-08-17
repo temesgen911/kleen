@@ -183,7 +183,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
     final isLoading = widget.authNotifier.isLoading;
 
     return Scaffold(

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 
 /// Service managing Firebase Authentication operations.
 class AuthService {
@@ -219,6 +218,8 @@ class _SimulatedUser implements User {
   @override
   Future<UserCredential> linkWithPopup(AuthProvider provider) async => throw UnimplementedError();
   @override
+  Future<void> linkWithRedirect(AuthProvider provider) async => throw UnimplementedError();
+  @override
   Future<ConfirmationResult> linkWithPhoneNumber(String phoneNumber, [RecaptchaVerifier? verifier]) async => throw UnimplementedError();
   @override
   Future<UserCredential> linkWithProvider(AuthProvider provider) async => throw UnimplementedError();
@@ -226,6 +227,8 @@ class _SimulatedUser implements User {
   Future<UserCredential> reauthenticateWithCredential(AuthCredential credential) async => throw UnimplementedError();
   @override
   Future<UserCredential> reauthenticateWithPopup(AuthProvider provider) async => throw UnimplementedError();
+  @override
+  Future<void> reauthenticateWithRedirect(AuthProvider provider) async => throw UnimplementedError();
   @override
   Future<UserCredential> reauthenticateWithProvider(AuthProvider provider) async => throw UnimplementedError();
   @override
