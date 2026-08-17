@@ -62,18 +62,21 @@ class _MockUserCredential implements UserCredential {
 AuthStateNotifier _createTestAuthNotifier({String? defaultEmail, String? defaultName}) {
   final testAuthService = _TestAuthService();
   final backendService = BackendUserService(
-    httpClient: MockClient((req) async => http.Response(
-      json.encode({
-        'id': 'test-uuid-123',
-        'firebaseUid': 'test-uid-123',
-        'email': defaultEmail ?? 'emma@example.com',
-        'displayName': defaultName ?? 'Emma Watson',
-        'timezone': 'UTC',
-        'createdAt': '2026-08-17T12:00:00.000Z',
-      }),
-      200,
-      headers: {'content-type': 'application/json'},
-    )),
+    httpClient: MockClient((req) async {
+      final userEmail = testAuthService.currentUser?.email ?? defaultEmail ?? 'emma@example.com';
+      return http.Response(
+        json.encode({
+          'id': 'test-uuid-123',
+          'firebaseUid': 'test-uid-123',
+          'email': userEmail,
+          'displayName': defaultName ?? 'Emma Watson',
+          'timezone': 'UTC',
+          'createdAt': '2026-08-17T12:00:00.000Z',
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    }),
   );
   return AuthStateNotifier(
     authService: testAuthService,
