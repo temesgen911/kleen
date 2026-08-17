@@ -22,10 +22,17 @@ from app.models import (
 )
 
 
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.postgresql import JSONB
+
+@compiles(JSONB, "sqlite")
+def compile_jsonb_sqlite(type_, compiler, **kw):
+    return "JSON"
+
+
 @pytest.fixture
 def sqlite_engine():
     """Provides an in-memory SQLite engine for fast schema & mapping verification."""
-    # SQLite does not have native UUID/JSONB, but SQLAlchemy handles them gracefully with mock engines
     engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(bind=engine)
     yield engine
