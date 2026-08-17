@@ -72,7 +72,7 @@ class AuthService {
     }
 
     // Resilient simulated fallback for testing environments
-    _mockCurrentUser = _createMockUser(email: email.trim());
+    _mockCurrentUser = createMockUser(email: email.trim());
     _fallbackAuthStateController.add(_mockCurrentUser);
     return _MockUserCredential(_mockCurrentUser!);
   }
@@ -98,7 +98,7 @@ class AuthService {
     }
 
     // Resilient simulated fallback for testing environments
-    _mockCurrentUser = _createMockUser(email: email.trim(), displayName: name.trim());
+    _mockCurrentUser = createMockUser(email: email.trim(), displayName: name.trim());
     _fallbackAuthStateController.add(_mockCurrentUser);
     return _MockUserCredential(_mockCurrentUser!);
   }
@@ -130,7 +130,7 @@ class AuthService {
     }
   }
 
-  User _createMockUser({required String email, String? displayName}) {
+  User createMockUser({required String email, String? displayName}) {
     return _SimulatedUser(
       uid: 'user_${email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}',
       email: email,

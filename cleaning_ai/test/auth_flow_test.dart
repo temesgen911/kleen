@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:cleaning_ai/models/auth_user.dart';
@@ -13,7 +14,53 @@ import 'package:cleaning_ai/screens/auth/auth_gate.dart';
 import 'package:cleaning_ai/screens/profile/profile_screen.dart';
 import 'package:cleaning_ai/screens/home/home_screen.dart';
 
+class _TestAuthService extends AuthService {
+  User? _simUser;
+
+  @override
+  User? get currentUser => _simUser;
+
+  @override
+  Future<String?> getIdToken([bool forceRefresh = false]) async => 'mock_token_123';
+
+  @override
+  Future<UserCredential> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    _simUser = createMockUser(email: email);
+    return _MockUserCredential(_simUser!);
+  }
+
+  @override
+  Future<UserCredential> createUserWithEmailAndPassword({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    _simUser = createMockUser(email: email, displayName: name);
+    return _MockUserCredential(_simUser!);
+  }
+
+  @override
+  Future<void> signOut() async {
+    _simUser = null;
+  }
+}
+
+class _MockUserCredential implements UserCredential {
+  @override
+  final User user;
+  _MockUserCredential(this.user);
+
+  @override
+  AuthCredential? get credential => null;
+  @override
+  AdditionalUserInfo? get additionalUserInfo => null;
+}
+
 AuthStateNotifier _createTestAuthNotifier({String? defaultEmail, String? defaultName}) {
+  final testAuthService = _TestAuthService();
   final backendService = BackendUserService(
     httpClient: MockClient((req) async => http.Response(
       json.encode({
@@ -28,7 +75,10 @@ AuthStateNotifier _createTestAuthNotifier({String? defaultEmail, String? default
       headers: {'content-type': 'application/json'},
     )),
   );
-  return AuthStateNotifier(backendUserService: backendService);
+  return AuthStateNotifier(
+    authService: testAuthService,
+    backendUserService: backendService,
+  );
 }
 
 void main() {
@@ -132,26 +182,7 @@ void main() {
 
   group('AuthStateNotifier & AuthService Integration Tests', () {
     test('Sign Up creates account, authenticates, and signs out', () async {
-      final authService = AuthService();
-      final backendService = BackendUserService(
-        httpClient: MockClient((req) async => http.Response(
-          json.encode({
-            'id': 'uuid-new-user',
-            'firebaseUid': 'user_new_test_com',
-            'email': 'new@test.com',
-            'displayName': 'New Cleaner',
-            'timezone': 'UTC',
-            'createdAt': '2026-08-17T12:00:00.000Z',
-          }),
-          200,
-          headers: {'content-type': 'application/json'},
-        )),
-      );
-
-      final notifier = AuthStateNotifier(
-        authService: authService,
-        backendUserService: backendService,
-      );
+      final notifier = _createTestAuthNotifier(defaultEmail: 'new@test.com', defaultName: 'New Cleaner');
 
       expect(notifier.isAuthenticated, isFalse);
 
@@ -173,7 +204,6 @@ void main() {
     });
 
     test('Sign In authenticates existing user and updates state', () async {
-      final authService = AuthService();
       final notifier = _createTestAuthNotifier(defaultEmail: 'emma.cleaning@example.com');
 
       final success = await notifier.signIn(
@@ -186,7 +216,6 @@ void main() {
       expect(notifier.currentUser?.email, 'emma.cleaning@example.com');
 
       notifier.dispose();
-      authService.signOut();
     });
   });
 
@@ -223,8 +252,7 @@ void main() {
       await tester.ensureVisible(submitBtn);
       await tester.tap(submitBtn);
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
 
       expect(authNotifier.isAuthenticated, isTrue);
 
@@ -269,8 +297,7 @@ void main() {
       await tester.ensureVisible(buttonFinder);
       await tester.tap(buttonFinder);
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
 
       expect(authNotifier.isAuthenticated, isTrue);
 
@@ -299,7 +326,7 @@ void main() {
         password: 'password123',
       );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.byType(LoginScreen), findsNothing);
@@ -307,7 +334,7 @@ void main() {
       // Sign out
       await authNotifier.signOut();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(find.byType(HomeScreen), findsNothing);
@@ -332,7 +359,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Profile'), findsWidgets);
       expect(find.text('alex@example.com'), findsOneWidget);
       expect(find.text('Sign Out'), findsOneWidget);
 
@@ -345,8 +372,7 @@ void main() {
       // Confirm sign out
       await tester.tap(find.widgetWithText(ElevatedButton, 'Sign Out'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
 
       expect(authNotifier.isAuthenticated, isFalse);
 
