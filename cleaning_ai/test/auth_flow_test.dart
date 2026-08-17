@@ -173,6 +173,10 @@ void main() {
 
   group('Auth UI Widget Tests', () {
     testWidgets('LoginScreen validates inputs and triggers sign in', (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
       final authNotifier = AuthStateNotifier();
 
       await tester.pumpWidget(
@@ -196,7 +200,8 @@ void main() {
       await tester.enterText(find.byType(TextFormField).first, 'emma@example.com');
       await tester.enterText(find.byType(TextFormField).last, 'secret123');
       await tester.tap(find.text('Sign In'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(authNotifier.isAuthenticated, isTrue);
 
@@ -204,6 +209,10 @@ void main() {
     });
 
     testWidgets('SignUpScreen validates password match and strength', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
       final authNotifier = AuthStateNotifier();
 
       await tester.pumpWidget(
@@ -225,15 +234,19 @@ void main() {
       expect(find.text('Strong'), findsOneWidget);
 
       // Attempt to submit
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Create Account'));
-      await tester.pump();
+      final buttonFinder = find.widgetWithText(ElevatedButton, 'Create Account');
+      await tester.ensureVisible(buttonFinder);
+      await tester.tap(buttonFinder);
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Passwords do not match.'), findsOneWidget);
 
       // Fix confirm password
       await tester.enterText(find.byType(TextFormField).at(3), 'mypassword123');
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Create Account'));
-      await tester.pumpAndSettle();
+      await tester.ensureVisible(buttonFinder);
+      await tester.tap(buttonFinder);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(authNotifier.isAuthenticated, isTrue);
 
@@ -241,6 +254,10 @@ void main() {
     });
 
     testWidgets('AuthGate switches dynamically between LoginScreen and HomeScreen', (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
       final authNotifier = AuthStateNotifier();
 
       await tester.pumpWidget(
@@ -257,14 +274,16 @@ void main() {
         email: 'test@example.com',
         password: 'password123',
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.byType(LoginScreen), findsNothing);
 
       // Sign out
       await authNotifier.signOut();
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(LoginScreen), findsOneWidget);
       expect(find.byType(HomeScreen), findsNothing);
@@ -273,6 +292,10 @@ void main() {
     });
 
     testWidgets('ProfileScreen renders user details and sign out dialog', (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
       final authNotifier = AuthStateNotifier();
       await authNotifier.signIn(
         email: 'alex@example.com',
@@ -291,13 +314,14 @@ void main() {
 
       // Open Sign Out dialog
       await tester.tap(find.text('Sign Out'));
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Are you sure you want to sign out of kleenai?'), findsOneWidget);
 
       // Confirm sign out
       await tester.tap(find.widgetWithText(ElevatedButton, 'Sign Out'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(authNotifier.isAuthenticated, isFalse);
 
