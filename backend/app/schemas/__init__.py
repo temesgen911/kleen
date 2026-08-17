@@ -12,10 +12,15 @@ from pydantic import BaseModel, ConfigDict, Field
 # ---------------------------------------------------------------------------
 
 class UserBase(BaseModel):
-    firebase_uid: str
-    display_name: Optional[str] = None
+    firebase_uid: str = Field(..., serialization_alias="firebaseUid")
+    display_name: Optional[str] = Field(None, serialization_alias="displayName")
     email: Optional[str] = None
     timezone: str = "UTC"
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class UserCreate(UserBase):
@@ -23,17 +28,25 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    display_name: Optional[str] = None
+    display_name: Optional[str] = Field(None, serialization_alias="displayName")
     email: Optional[str] = None
     timezone: Optional[str] = None
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class UserRead(UserBase):
     id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime = Field(..., serialization_alias="createdAt")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -44,6 +57,11 @@ class ScanSessionBase(BaseModel):
     status: str = "in_progress"
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
 
 class ScanSessionCreate(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -51,13 +69,16 @@ class ScanSessionCreate(BaseModel):
 
 class ScanSessionRead(ScanSessionBase):
     id: uuid.UUID
-    user_id: uuid.UUID
-    started_at: datetime
-    completed_at: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    started_at: datetime = Field(..., serialization_alias="startedAt")
+    completed_at: Optional[datetime] = Field(None, serialization_alias="completedAt")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -66,22 +87,30 @@ class ScanSessionRead(ScanSessionBase):
 
 class RoomBase(BaseModel):
     name: str
-    room_type: str
-    last_scanned_at: Optional[datetime] = None
+    room_type: str = Field(..., serialization_alias="roomType")
+    last_scanned_at: Optional[datetime] = Field(None, serialization_alias="lastScannedAt")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class RoomCreate(RoomBase):
-    scan_session_id: Optional[uuid.UUID] = None
+    scan_session_id: Optional[uuid.UUID] = Field(None, serialization_alias="scanSessionId")
 
 
 class RoomRead(RoomBase):
     id: uuid.UUID
-    user_id: uuid.UUID
-    scan_session_id: Optional[uuid.UUID] = None
-    created_at: datetime
-    updated_at: datetime
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    scan_session_id: Optional[uuid.UUID] = Field(None, serialization_alias="scanSessionId")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -89,28 +118,36 @@ class RoomRead(RoomBase):
 # ---------------------------------------------------------------------------
 
 class CapturedImageBase(BaseModel):
-    storage_path: str
+    storage_path: str = Field(..., serialization_alias="storagePath")
     width: Optional[int] = None
     height: Optional[int] = None
-    orientation_degrees: int = 0
-    source_type: str = "camera"
-    captured_at: Optional[datetime] = None
+    orientation_degrees: int = Field(0, serialization_alias="orientationDegrees")
+    source_type: str = Field("camera", serialization_alias="sourceType")
+    captured_at: Optional[datetime] = Field(None, serialization_alias="capturedAt")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class CapturedImageCreate(CapturedImageBase):
-    room_id: uuid.UUID
-    scan_session_id: Optional[uuid.UUID] = None
+    room_id: uuid.UUID = Field(..., serialization_alias="roomId")
+    scan_session_id: Optional[uuid.UUID] = Field(None, serialization_alias="scanSessionId")
 
 
 class CapturedImageRead(CapturedImageBase):
     id: uuid.UUID
-    room_id: uuid.UUID
-    user_id: uuid.UUID
-    scan_session_id: Optional[uuid.UUID] = None
-    captured_at: datetime
-    created_at: datetime
+    room_id: uuid.UUID = Field(..., serialization_alias="roomId")
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    scan_session_id: Optional[uuid.UUID] = Field(None, serialization_alias="scanSessionId")
+    captured_at: datetime = Field(..., serialization_alias="capturedAt")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -118,28 +155,36 @@ class CapturedImageRead(CapturedImageBase):
 # ---------------------------------------------------------------------------
 
 class ConfirmedItemBase(BaseModel):
-    normalized_name: str
-    display_name: str
+    normalized_name: str = Field(..., serialization_alias="normalizedName")
+    display_name: str = Field(..., serialization_alias="displayName")
     category: str
     material: Optional[str] = None
     provenance: str = "ai_detected"
     confidence: Optional[Decimal] = None
-    is_confirmed: bool = True
-    source_metadata: Dict[str, Any] = Field(default_factory=dict)
+    is_confirmed: bool = Field(True, serialization_alias="isConfirmed")
+    source_metadata: Dict[str, Any] = Field(default_factory=dict, serialization_alias="sourceMetadata")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class ConfirmedItemCreate(ConfirmedItemBase):
-    room_id: uuid.UUID
+    room_id: uuid.UUID = Field(..., serialization_alias="roomId")
 
 
 class ConfirmedItemRead(ConfirmedItemBase):
     id: uuid.UUID
-    room_id: uuid.UUID
-    user_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
+    room_id: uuid.UUID = Field(..., serialization_alias="roomId")
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -148,24 +193,32 @@ class ConfirmedItemRead(ConfirmedItemBase):
 
 class CleaningRequirementBase(BaseModel):
     action: str
-    interval_days: int = 7
-    estimated_minutes: int = 10
+    interval_days: int = Field(7, serialization_alias="intervalDays")
+    estimated_minutes: int = Field(10, serialization_alias="estimatedMinutes")
     priority: str = "medium"
-    rule_metadata: Dict[str, Any] = Field(default_factory=dict)
+    rule_metadata: Dict[str, Any] = Field(default_factory=dict, serialization_alias="ruleMetadata")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class CleaningRequirementCreate(CleaningRequirementBase):
-    confirmed_item_id: uuid.UUID
+    confirmed_item_id: uuid.UUID = Field(..., serialization_alias="confirmedItemId")
 
 
 class CleaningRequirementRead(CleaningRequirementBase):
     id: uuid.UUID
-    confirmed_item_id: uuid.UUID
-    user_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
+    confirmed_item_id: uuid.UUID = Field(..., serialization_alias="confirmedItemId")
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -174,33 +227,46 @@ class CleaningRequirementRead(CleaningRequirementBase):
 
 class PlanTaskBase(BaseModel):
     title: str
-    scheduled_date: date
-    estimated_minutes: int = 10
+    scheduled_date: date = Field(..., serialization_alias="scheduledDate")
+    estimated_minutes: int = Field(10, serialization_alias="estimatedMinutes")
     status: str = "pending"
-    order_index: int = 0
+    order_index: int = Field(0, serialization_alias="orderIndex")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class PlanTaskCreate(PlanTaskBase):
-    confirmed_item_id: Optional[uuid.UUID] = None
-    cleaning_requirement_id: Optional[uuid.UUID] = None
+    confirmed_item_id: Optional[uuid.UUID] = Field(None, serialization_alias="confirmedItemId")
+    cleaning_requirement_id: Optional[uuid.UUID] = Field(None, serialization_alias="cleaningRequirementId")
 
 
 class PlanTaskRead(PlanTaskBase):
     id: uuid.UUID
-    plan_id: uuid.UUID
-    user_id: uuid.UUID
-    confirmed_item_id: Optional[uuid.UUID] = None
-    cleaning_requirement_id: Optional[uuid.UUID] = None
-    created_at: datetime
-    updated_at: datetime
+    plan_id: uuid.UUID = Field(..., serialization_alias="planId")
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    confirmed_item_id: Optional[uuid.UUID] = Field(None, serialization_alias="confirmedItemId")
+    cleaning_requirement_id: Optional[uuid.UUID] = Field(None, serialization_alias="cleaningRequirementId")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class CleaningPlanBase(BaseModel):
     status: str = "draft"
-    plan_version: int = 1
-    accepted_at: Optional[datetime] = None
+    plan_version: int = Field(1, serialization_alias="planVersion")
+    accepted_at: Optional[datetime] = Field(None, serialization_alias="acceptedAt")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class CleaningPlanCreate(CleaningPlanBase):
@@ -209,12 +275,15 @@ class CleaningPlanCreate(CleaningPlanBase):
 
 class CleaningPlanRead(CleaningPlanBase):
     id: uuid.UUID
-    user_id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt")
     tasks: List[PlanTaskRead] = Field(default_factory=list)
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -222,24 +291,32 @@ class CleaningPlanRead(CleaningPlanBase):
 # ---------------------------------------------------------------------------
 
 class TaskCompletionBase(BaseModel):
-    completion_status: str = "completed"
-    actual_duration_seconds: Optional[int] = None
+    completion_status: str = Field("completed", serialization_alias="completionStatus")
+    actual_duration_seconds: Optional[int] = Field(None, serialization_alias="actualDurationSeconds")
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 class TaskCompletionCreate(TaskCompletionBase):
-    plan_task_id: uuid.UUID
-    completed_at: Optional[datetime] = None
+    plan_task_id: uuid.UUID = Field(..., serialization_alias="planTaskId")
+    completed_at: Optional[datetime] = Field(None, serialization_alias="completedAt")
 
 
 class TaskCompletionRead(TaskCompletionBase):
     id: uuid.UUID
-    plan_task_id: uuid.UUID
-    user_id: uuid.UUID
-    completed_at: datetime
-    created_at: datetime
+    plan_task_id: uuid.UUID = Field(..., serialization_alias="planTaskId")
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    completed_at: datetime = Field(..., serialization_alias="completedAt")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -248,12 +325,15 @@ class TaskCompletionRead(TaskCompletionBase):
 
 class UserStreakRead(BaseModel):
     id: uuid.UUID
-    user_id: uuid.UUID
-    current_streak: int = 0
-    longest_streak: int = 0
-    last_completed_date: Optional[date] = None
-    freeze_count: int = 0
-    created_at: datetime
-    updated_at: datetime
+    user_id: uuid.UUID = Field(..., serialization_alias="userId")
+    current_streak: int = Field(0, serialization_alias="currentStreak")
+    longest_streak: int = Field(0, serialization_alias="longestStreak")
+    last_completed_date: Optional[date] = Field(None, serialization_alias="lastCompletedDate")
+    freeze_count: int = Field(0, serialization_alias="freezeCount")
+    created_at: datetime = Field(..., serialization_alias="createdAt")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True,
+    )

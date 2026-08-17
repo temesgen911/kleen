@@ -13,53 +13,64 @@ This service is the backend API and persistence layer for the Cleaning AI Flutte
 
 ```text
 [Flutter Client] 
-      ↓ (Firebase ID Token)
-[FastAPI Backend] 
-      ↓ (Secure Server Connection / Service Role)
+      ↓ (Firebase ID Token in Authorization: Bearer <token>)
+[FastAPI Backend] (verifies Firebase token via Firebase Admin SDK)
+      ↓ (derives verified firebase_uid -> synchronizes users row)
 [Supabase PostgreSQL]
 ```
 
 ---
 
-## 2. Supabase Setup Checklist (Quick Start)
+## 2. Firebase Authentication Configuration
 
-To apply the database schema to your Supabase project:
+Firebase Authentication is the sole user identity provider. FastAPI verifies ID tokens on incoming requests, derives the authenticated `firebase_uid`, and automatically provisions/synchronizes corresponding profile rows in the PostgreSQL `users` table.
 
-### Step 1: Open Supabase SQL Editor
-1. Go to your Supabase Dashboard: [https://supabase.com/dashboard/project/jccjchbpwgcjscfklfpn](https://supabase.com/dashboard/project/jccjchbpwgcjscfklfpn)
-2. In the left navigation, click on **SQL Editor** (`>_`).
-3. Click **+ New Query**.
+### Environment Variables for Firebase
 
-### Step 2: Run the Initial Migration Script
-Copy and paste the complete content of [`migrations/0001_initial_schema.sql`](migrations/0001_initial_schema.sql) into the SQL editor and click **Run** (or `Cmd + Enter`).
+| Variable | Description | Where to use |
+|---|---|---|
+| `FIREBASE_PROJECT_ID` | Your Firebase Project ID (`kleenai`). | Local & Render |
+| `FIREBASE_CREDENTIALS_PATH` | Path to your downloaded service account JSON key file (e.g. `./firebase-credentials.json`). | Local development only (never commit this file) |
+| `FIREBASE_CREDENTIALS_JSON` | Minified raw JSON string of your service account key. | Render / Cloud hosting / CI secret |
 
-### Step 3: Verify the Schema in Supabase Table Editor
-After running the script, verify that all **10 tables** appear in the **Table Editor**:
-1. `users` — Stores Firebase UID external identity key (`firebase_uid`), timezone, display name.
-2. `scan_sessions` — Tracks multi-room scanning workflows and state (`in_progress`, `analyzed`, `confirmed`).
-3. `rooms` — User rooms (`Living Room`, `Kitchen`, etc.) linked to scan sessions.
-4. `captured_images` — Image metadata, dimensions, orientation, and storage paths (raw bytes are NOT in SQL).
-5. `confirmed_items` — Cleanable objects detected by AI or added by users.
-6. `cleaning_requirements` — Cleaning actions, recurring intervals (`interval_days`), duration estimates, and priorities.
-7. `cleaning_plans` — Cleaning plans with partial unique index enforcing only **1 active plan per user**.
-8. `plan_tasks` — Discrete cleaning tasks assigned to specific **calendar dates** (`scheduled_date`).
-9. `task_completions` — Immutable completion logs, timer durations, and pacing adjustment metrics.
-10. `user_streaks` — Consecutive daily reset streak counters and milestones.
+#### How to Obtain Firebase Service Account Key:
+1. Open the [Firebase Console](https://console.firebase.google.com/).
+2. Select project **kleenai**.
+3. Go to **Project Settings** (gear icon) → **Service accounts**.
+4. Click **Generate new private key** and download the JSON file.
+5. **For Local Dev:** Place it at `backend/firebase-credentials.json` (already in `.gitignore`) and set `FIREBASE_CREDENTIALS_PATH=./firebase-credentials.json` in `backend/.env`.
+6. **For Render Deployment:** Copy the entire JSON content and paste it into the `FIREBASE_CREDENTIALS_JSON` environment variable in Render's dashboard.
 
 ---
 
-## 3. Row Level Security (RLS) & Defense in Depth
+## 3. Endpoints
 
-- RLS is **enabled and enforced** (`FORCE ROW LEVEL SECURITY`) on all user-owned tables.
-- Because authentication is handled via **Firebase Auth**, direct anonymous/public PostgREST access via the Supabase client is denied by default.
-- The FastAPI backend connects using server-level PostgreSQL connection credentials (`service_role` or database password), maintaining security while allowing token-verified API operations.
+### Public Endpoints
+- `GET /health`: Returns service health, environment status, and active Firebase project name.
+- `GET /`: API entrypoint and documentation links.
+- `GET /docs`: Interactive Swagger UI documentation.
+- `GET /redoc`: ReDoc API documentation.
+
+### Authenticated Endpoints (`Authorization: Bearer <firebase_id_token>`)
+- `GET /api/v1/me`: Returns the verified user's profile from PostgreSQL:
+  ```json
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "firebaseUid": "firebase_user_uid_123",
+    "email": "user@example.com",
+    "displayName": "Emma Watson",
+    "timezone": "UTC",
+    "createdAt": "2026-08-17T11:45:00Z",
+    "updatedAt": "2026-08-17T11:45:00Z"
+  }
+  ```
 
 ---
 
 ## 4. Local Backend Setup
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.9+ / 3.11+
 - Virtualenv
 
 ### Installation
@@ -71,30 +82,27 @@ pip install -r requirements.txt
 ```
 
 ### Environment Variables (`backend/.env`)
-Create a `.env` file in the `backend/` directory:
 ```env
 ENVIRONMENT=development
 PROJECT_NAME="Cleaning AI Backend"
 SUPABASE_URL=https://jccjchbpwgcjscfklfpn.supabase.co
 
-# Supabase PostgreSQL Connection String
-# Find this in Supabase Dashboard -> Project Settings -> Database -> Connection string (URI)
-DATABASE_URL=postgresql+asyncpg://postgres.[PROJECT_REF]:[YOUR_PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-SYNC_DATABASE_URL=postgresql://postgres.[PROJECT_REF]:[YOUR_PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+# Supabase Shared Pooler Connection Strings (EU-West-1)
+DATABASE_URL=postgresql+asyncpg://postgres.jccjchbpwgcjscfklfpn:[YOUR_PASSWORD]@aws-1-eu-west-1.pooler.supabase.com:6543/postgres
+SYNC_DATABASE_URL=postgresql://postgres.jccjchbpwgcjscfklfpn:[YOUR_PASSWORD]@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
 
-# Firebase Admin SDK Configuration
-FIREBASE_PROJECT_ID=cleaning-ai-app
+# Firebase Authentication
+FIREBASE_PROJECT_ID=kleenai
 FIREBASE_CREDENTIALS_PATH=./firebase-credentials.json
+FIREBASE_CREDENTIALS_JSON=
 ```
 
-### Running Migrations via Alembic (Optional Alternative to SQL Editor)
+### Running Tests
 ```bash
-alembic upgrade head
+.venv/bin/python -m pytest tests/
 ```
 
-### Running the API Server
+### Running API Server
 ```bash
-uvicorn app.main:app --reload --port 8000
+.venv/bin/uvicorn app.main:app --reload --port 8000
 ```
-- API Docs: `http://localhost:8000/docs`
-- Healthcheck: `http://localhost:8000/health`

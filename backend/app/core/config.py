@@ -1,5 +1,6 @@
 """Application configuration settings."""
 
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,8 +10,6 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # Supabase PostgreSQL Database Settings
-    # Format: postgresql+asyncpg://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
-    # Direct/Sync Format: postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/cleaning_ai"
     SYNC_DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/cleaning_ai"
 
@@ -19,8 +18,9 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str = ""
 
     # Firebase Authentication
-    FIREBASE_PROJECT_ID: str = ""
-    FIREBASE_CREDENTIALS_PATH: str = ""
+    FIREBASE_PROJECT_ID: str = "kleenai"
+    FIREBASE_CREDENTIALS_PATH: Optional[str] = None
+    FIREBASE_CREDENTIALS_JSON: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
