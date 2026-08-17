@@ -13,14 +13,14 @@ import 'package:cleaning_ai/screens/auth/auth_gate.dart';
 import 'package:cleaning_ai/screens/profile/profile_screen.dart';
 import 'package:cleaning_ai/screens/home/home_screen.dart';
 
-AuthStateNotifier _createTestAuthNotifier() {
+AuthStateNotifier _createTestAuthNotifier({String? defaultEmail, String? defaultName}) {
   final backendService = BackendUserService(
     httpClient: MockClient((req) async => http.Response(
       json.encode({
         'id': 'test-uuid-123',
         'firebaseUid': 'test-uid-123',
-        'email': 'emma@example.com',
-        'displayName': 'Emma Watson',
+        'email': defaultEmail ?? 'emma@example.com',
+        'displayName': defaultName ?? 'Emma Watson',
         'timezone': 'UTC',
         'createdAt': '2026-08-17T12:00:00.000Z',
       }),
@@ -174,7 +174,7 @@ void main() {
 
     test('Sign In authenticates existing user and updates state', () async {
       final authService = AuthService();
-      final notifier = _createTestAuthNotifier();
+      final notifier = _createTestAuthNotifier(defaultEmail: 'emma.cleaning@example.com');
 
       final success = await notifier.signIn(
         email: 'emma.cleaning@example.com',
@@ -209,7 +209,7 @@ void main() {
       expect(find.text('Create Account'), findsOneWidget);
 
       // Attempt to submit empty form
-      await tester.tap(find.text('Sign In'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In'));
       await tester.pump();
 
       expect(find.text('Please enter your email address.'), findsOneWidget);
@@ -218,9 +218,11 @@ void main() {
       // Enter valid credentials
       await tester.enterText(find.byType(TextFormField).first, 'emma@example.com');
       await tester.enterText(find.byType(TextFormField).last, 'secret123');
-      await tester.tap(find.text('Sign In'));
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pump(const Duration(milliseconds: 300));
+
+      final submitBtn = find.widgetWithText(ElevatedButton, 'Sign In');
+      await tester.ensureVisible(submitBtn);
+      await tester.tap(submitBtn);
+      await tester.pumpAndSettle();
 
       expect(authNotifier.isAuthenticated, isTrue);
 
@@ -256,7 +258,7 @@ void main() {
       final buttonFinder = find.widgetWithText(ElevatedButton, 'Create Account');
       await tester.ensureVisible(buttonFinder);
       await tester.tap(buttonFinder);
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
 
       expect(find.text('Passwords do not match.'), findsOneWidget);
 
@@ -264,8 +266,7 @@ void main() {
       await tester.enterText(find.byType(TextFormField).at(3), 'mypassword123');
       await tester.ensureVisible(buttonFinder);
       await tester.tap(buttonFinder);
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
 
       expect(authNotifier.isAuthenticated, isTrue);
 
@@ -293,7 +294,7 @@ void main() {
         email: 'test@example.com',
         password: 'password123',
       );
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(HomeScreen), findsOneWidget);
@@ -301,7 +302,7 @@ void main() {
 
       // Sign out
       await authNotifier.signOut();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -333,14 +334,13 @@ void main() {
 
       // Open Sign Out dialog
       await tester.tap(find.text('Sign Out'));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
 
       expect(find.text('Are you sure you want to sign out of kleenai?'), findsOneWidget);
 
       // Confirm sign out
       await tester.tap(find.widgetWithText(ElevatedButton, 'Sign Out'));
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
 
       expect(authNotifier.isAuthenticated, isFalse);
 
