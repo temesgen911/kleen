@@ -222,7 +222,9 @@ void main() {
       final submitBtn = find.widgetWithText(ElevatedButton, 'Sign In');
       await tester.ensureVisible(submitBtn);
       await tester.tap(submitBtn);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(authNotifier.isAuthenticated, isTrue);
 
@@ -266,7 +268,9 @@ void main() {
       await tester.enterText(find.byType(TextFormField).at(3), 'mypassword123');
       await tester.ensureVisible(buttonFinder);
       await tester.tap(buttonFinder);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(authNotifier.isAuthenticated, isTrue);
 
@@ -340,7 +344,9 @@ void main() {
 
       // Confirm sign out
       await tester.tap(find.widgetWithText(ElevatedButton, 'Sign Out'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(authNotifier.isAuthenticated, isFalse);
 
