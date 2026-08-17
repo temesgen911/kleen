@@ -13,14 +13,11 @@ __pycache__/
 *.so
 .Python
 env/
-build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -33,3 +30,16 @@ wheels/
 venv/
 ENV/
 .pytest_cache/
+
+# Firebase & Secrets
+firebase-credentials.json
+*credentials*.json
+GoogleService-Info.plist
+google-services.json
+
+# Flutter specific
+cleaning_ai/build/
+cleaning_ai/build
+cleaning_ai/.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies

@@ -4,7 +4,12 @@ import '../../../widgets/icon_badge.dart';
 import '../../../theme/app_colors.dart';
 
 class HeaderSection extends StatelessWidget {
-  const HeaderSection({super.key});
+  final String displayName;
+
+  const HeaderSection({
+    super.key,
+    this.displayName = 'Emma',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +56,7 @@ class HeaderSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Good morning,\nEmma ✨',
+                      'Good morning,\n$displayName ✨',
                       style: AppTypography.greeting,
                     ),
                     const SizedBox(height: 4),

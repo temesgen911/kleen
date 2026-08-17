@@ -1,14 +1,22 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../screens/home/home_screen.dart';
+import '../screens/plan/weekly_plan_screen.dart';
+import '../screens/profile/profile_screen.dart';
+import '../screens/scan/scanner_screen.dart';
+import '../services/auth_state_notifier.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
-import '../screens/scan/scanner_screen.dart';
-import '../screens/plan/weekly_plan_screen.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int activeIndex;
+  final AuthStateNotifier? authNotifier;
 
-  const BottomNavBar({super.key, this.activeIndex = 0});
+  const BottomNavBar({
+    super.key,
+    this.activeIndex = 0,
+    this.authNotifier,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,11 +31,10 @@ class BottomNavBar extends StatelessWidget {
             right: 24,
           ),
           decoration: BoxDecoration(
-            // Darker, more opaque nav bg — not washed out
             color: AppColors.backgroundEnd.withValues(alpha: 0.92),
             border: const Border(
               top: BorderSide(
-                color: Color(0x30FFFFFF), // crisp thin top rule
+                color: Color(0x30FFFFFF),
                 width: 0.5,
               ),
             ),
@@ -35,7 +42,15 @@ class BottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildNavItem(Icons.home, 'Home', activeIndex == 0, () {}),
+              _buildNavItem(Icons.home, 'Home', activeIndex == 0, () {
+                if (activeIndex != 0) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => HomeScreen(authNotifier: authNotifier)),
+                    (route) => route.isFirst,
+                  );
+                }
+              }),
               _buildNavItem(Icons.document_scanner, 'Scan', activeIndex == 1, () {
                 Navigator.push(
                   context,
@@ -50,7 +65,16 @@ class BottomNavBar extends StatelessWidget {
                   ),
                 );
               }),
-              _buildNavItem(Icons.person, 'Profile', activeIndex == 3, () {}),
+              _buildNavItem(Icons.person, 'Profile', activeIndex == 3, () {
+                if (activeIndex != 3) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(authNotifier: authNotifier),
+                    ),
+                  );
+                }
+              }),
             ],
           ),
         ),
@@ -66,7 +90,6 @@ class BottomNavBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Active glow dot above icon
           if (active)
             Container(
               width: 4,

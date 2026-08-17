@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
-import '../home/home_screen.dart';
+import '../auth/auth_gate.dart';
 import 'cleaning_logo_painter.dart';
 
 /// Premium animated startup splash screen for Cleaning AI.
@@ -10,7 +10,7 @@ import 'cleaning_logo_painter.dart';
 /// • 0.25–1.05s: Progressive curve drawing via intelligent beam of light with bloom & trail.
 /// • 1.05–1.45s: 4-point sparkle creation with diamond glint flash & shockwave ring.
 /// • 1.45–1.80s: Fully settled logo with subtle breathing pulse & ambient cyan halo.
-/// • 1.80–2.20s: Continuous seamless dissolve into the main application.
+/// • 1.80–2.20s: Continuous seamless dissolve into the main application auth gateway.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -114,18 +114,18 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && !_hasNavigated && mounted) {
         _hasNavigated = true;
-        _navigateToHome();
+        _navigateToAuthGate();
       }
     });
 
     _controller.forward();
   }
 
-  void _navigateToHome() {
+  void _navigateToAuthGate() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const HomeScreen(),
+            const AuthGate(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(

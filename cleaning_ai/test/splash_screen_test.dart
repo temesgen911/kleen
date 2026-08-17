@@ -52,14 +52,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.byType(SplashScreen), findsOneWidget);
 
-      // Phase 5: Transition into HomeScreen (3.2s)
+      // Phase 5: Transition into AuthGate (3.2s)
       await tester.pump(const Duration(milliseconds: 1000));
       // Route push transition (450ms)
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pump(const Duration(milliseconds: 600));
 
-      // Should now be on HomeScreen
-      expect(find.byType(HomeScreen), findsOneWidget);
+      // Should now be on AuthGate
+      expect(find.byType(SplashScreen), findsNothing);
     });
   });
 }

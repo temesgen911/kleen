@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_state_notifier.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import 'widgets/header_section.dart';
@@ -7,14 +8,21 @@ import 'widgets/streak_card.dart';
 import 'widgets/todays_plan_card.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final AuthStateNotifier? authNotifier;
+
+  const HomeScreen({
+    super.key,
+    this.authNotifier,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final displayName = authNotifier?.currentUser?.effectiveDisplayName ?? 'Emma';
+
     return Scaffold(
       extendBody: true,
       backgroundColor: AppColors.backgroundStart,
-      bottomNavigationBar: const BottomNavBar(),
+      bottomNavigationBar: BottomNavBar(authNotifier: authNotifier),
       body: Stack(
         children: [
           // Deep background base
@@ -85,16 +93,16 @@ class HomeScreen extends StatelessWidget {
               top: MediaQuery.of(context).padding.top + 16,
               bottom: MediaQuery.of(context).padding.bottom + 120, // Accounts for nav bar
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                HeaderSection(),
-                SizedBox(height: 24),
-                TodaysPlanCard(),
-                SizedBox(height: 16),
-                NextScanCard(),
-                SizedBox(height: 16),
-                StreakCard(),
+                HeaderSection(displayName: displayName),
+                const SizedBox(height: 24),
+                const TodaysPlanCard(),
+                const SizedBox(height: 16),
+                const NextScanCard(),
+                const SizedBox(height: 16),
+                const StreakCard(),
               ],
             ),
           ),
