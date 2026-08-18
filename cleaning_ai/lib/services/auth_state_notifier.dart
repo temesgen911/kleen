@@ -43,6 +43,7 @@ class AuthStateNotifier extends ChangeNotifier {
 
   Future<void> _syncWithBackend(fb.User fbUser) async {
     try {
+      debugPrint('[KleenAI Auth] Syncing authenticated user with backend: ${fbUser.email} (${fbUser.uid})');
       final token = await _authService.getIdToken() ?? 'mock_token_${fbUser.uid}';
       final syncedProfile = await _backendUserService.fetchOrSyncUserProfile(
         firebaseIdToken: token,
@@ -60,8 +61,9 @@ class AuthStateNotifier extends ChangeNotifier {
             timezone: 'UTC',
             createdAt: DateTime.now(),
           );
+      debugPrint('[KleenAI Auth] ✅ User state updated: ${_currentUser?.email}');
     } catch (e) {
-      developer.log('Error syncing user profile: $e', name: 'AuthStateNotifier');
+      debugPrint('[KleenAI Auth] ⚠️ Error syncing user profile with backend: $e');
       _currentUser = AuthUser(
         id: fbUser.uid,
         firebaseUid: fbUser.uid,
@@ -80,24 +82,26 @@ class AuthStateNotifier extends ChangeNotifier {
     _clearError();
 
     try {
+      debugPrint('[KleenAI Auth] Attempting Google Sign-In...');
       final credential = await _authService.signInWithGoogle();
       if (credential == null) {
-        // User cancelled Google sign-in
+        debugPrint('[KleenAI Auth] Google Sign-In cancelled by user.');
         _setLoading(false);
         return false;
       }
       if (credential.user != null) {
+        debugPrint('[KleenAI Auth] Google Sign-In succeeded, syncing backend for ${credential.user!.email}');
         await _syncWithBackend(credential.user!);
       }
       _setLoading(false);
       return true;
     } on fb.FirebaseAuthException catch (e) {
-      developer.log('Firebase Auth Exception during Google sign-in: ${e.code} - ${e.message}', name: 'AuthStateNotifier');
+      debugPrint('[KleenAI Auth] ❌ Firebase Auth Exception during Google sign-in: ${e.code} - ${e.message}');
       _setError(_mapFirebaseAuthError(e));
       _setLoading(false);
       return false;
     } catch (e) {
-      developer.log('Error during Google sign-in: $e', name: 'AuthStateNotifier');
+      debugPrint('[KleenAI Auth] ❌ Generic Error during Google sign-in: $e');
       final err = e.toString();
       if (err.contains('operation-not-allowed') || err.contains('disabled')) {
         _setError('Google Sign-In is disabled in Firebase Console. Enable it in Authentication > Sign-in method.');

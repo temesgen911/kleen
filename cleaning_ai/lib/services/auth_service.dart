@@ -35,12 +35,9 @@ class AuthService {
       }
       _auth = FirebaseAuth.instance;
       _initialized = true;
-      developer.log('[AuthService] Firebase Auth initialized successfully with project ${Firebase.app().options.projectId}.', name: 'AuthService');
+      debugPrint('[KleenAI Auth] Firebase Auth initialized successfully for project ${Firebase.app().options.projectId}.');
     } catch (e, stack) {
-      developer.log(
-        '[AuthService] Firebase Core initialization notice: $e\n$stack',
-        name: 'AuthService',
-      );
+      debugPrint('[KleenAI Auth] Firebase Core initialization notice: $e\n$stack');
       _initialized = false;
     }
   }
@@ -79,35 +76,35 @@ class AuthService {
     if (_auth != null && _initialized) {
       try {
         if (kIsWeb) {
-          developer.log('[AuthService] Initiating Web Google popup sign in...', name: 'AuthService');
+          debugPrint('[KleenAI Auth] Initiating Web Google popup sign in...');
           final GoogleAuthProvider authProvider = GoogleAuthProvider();
           return await _auth!.signInWithPopup(authProvider);
         } else {
-          developer.log('[AuthService] Initiating Google Sign-In with clientId 30408461674-behuqgg4crrcecjkfn9669m8b6q1babc...', name: 'AuthService');
+          debugPrint('[KleenAI Auth] Initiating Google Sign-In prompt...');
           final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
           if (googleUser == null) {
-            developer.log('[AuthService] Google Sign-In dismissed/cancelled by user.', name: 'AuthService');
+            debugPrint('[KleenAI Auth] Google Sign-In prompt was dismissed by user.');
             return null;
           }
 
-          developer.log('[AuthService] Google account selected: ${googleUser.email}', name: 'AuthService');
+          debugPrint('[KleenAI Auth] Google Account selected: ${googleUser.email}');
           final GoogleSignInAuthentication googleAuth =
               await googleUser.authentication;
 
-          developer.log('[AuthService] Auth tokens retrieved - idToken present: ${googleAuth.idToken != null}, accessToken present: ${googleAuth.accessToken != null}', name: 'AuthService');
+          debugPrint('[KleenAI Auth] Google Tokens retrieved - idToken: ${googleAuth.idToken != null}, accessToken: ${googleAuth.accessToken != null}');
 
           final AuthCredential credential = GoogleAuthProvider.credential(
             idToken: googleAuth.idToken,
             accessToken: googleAuth.accessToken,
           );
 
-          developer.log('[AuthService] Calling FirebaseAuth.signInWithCredential...', name: 'AuthService');
+          debugPrint('[KleenAI Auth] Authenticating with Firebase using Google credential...');
           final userCred = await _auth!.signInWithCredential(credential);
-          developer.log('[AuthService] Firebase user successfully signed in with Google! UID: ${userCred.user?.uid}, email: ${userCred.user?.email}', name: 'AuthService');
+          debugPrint('[KleenAI Auth] ✅ Firebase Google Sign-In SUCCESS! UID: ${userCred.user?.uid}, Email: ${userCred.user?.email}');
           return userCred;
         }
       } catch (e, stack) {
-        developer.log('[AuthService] Google Sign In error: $e\n$stack', name: 'AuthService');
+        debugPrint('[KleenAI Auth] ❌ Google Sign-In Error: $e\n$stack');
         rethrow;
       }
     }
