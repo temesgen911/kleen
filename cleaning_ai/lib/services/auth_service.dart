@@ -9,7 +9,13 @@ import '../firebase_options.dart';
 /// Service managing Firebase Authentication & Google Sign-In operations.
 class AuthService {
   FirebaseAuth? _auth;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: kIsWeb
+        ? null
+        : (defaultTargetPlatform == TargetPlatform.iOS
+            ? '30408461674-behuqgg4crrcecjkfn9669m8b6q1babc.apps.googleusercontent.com'
+            : null),
+  );
   bool _initialized = false;
 
   final StreamController<User?> _fallbackAuthStateController =
@@ -76,12 +82,14 @@ class AuthService {
           final GoogleAuthProvider authProvider = GoogleAuthProvider();
           return await _auth!.signInWithPopup(authProvider);
         } else {
+          developer.log('Triggering GoogleSignIn.signIn()...', name: 'AuthService');
           final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
           if (googleUser == null) {
-            // User cancelled Google Sign-In
+            developer.log('Google Sign-In dismissed/cancelled by user.', name: 'AuthService');
             return null;
           }
 
+          developer.log('Google account selected: ${googleUser.email}', name: 'AuthService');
           final GoogleSignInAuthentication googleAuth =
               await googleUser.authentication;
 
@@ -90,7 +98,9 @@ class AuthService {
             accessToken: googleAuth.accessToken,
           );
 
-          return await _auth!.signInWithCredential(credential);
+          final userCred = await _auth!.signInWithCredential(credential);
+          developer.log('Firebase user successfully signed in with Google: ${userCred.user?.uid}', name: 'AuthService');
+          return userCred;
         }
       } catch (e) {
         developer.log('Google Sign In error: $e', name: 'AuthService');

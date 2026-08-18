@@ -92,12 +92,20 @@ class AuthStateNotifier extends ChangeNotifier {
       _setLoading(false);
       return true;
     } on fb.FirebaseAuthException catch (e) {
+      developer.log('Firebase Auth Exception during Google sign-in: ${e.code} - ${e.message}', name: 'AuthStateNotifier');
       _setError(_mapFirebaseAuthError(e));
       _setLoading(false);
       return false;
     } catch (e) {
-      developer.log('Google sign-in error: $e', name: 'AuthStateNotifier');
-      _setError('Failed to sign in with Google. Please try again.');
+      developer.log('Error during Google sign-in: $e', name: 'AuthStateNotifier');
+      final err = e.toString();
+      if (err.contains('operation-not-allowed') || err.contains('disabled')) {
+        _setError('Google Sign-In is disabled in Firebase Console. Enable it in Authentication > Sign-in method.');
+      } else if (err.contains('network') || err.contains('SocketException')) {
+        _setError('Network connection error. Please check your internet connection.');
+      } else {
+        _setError('Sign in error: ${err.replaceAll("Exception: ", "")}');
+      }
       _setLoading(false);
       return false;
     }
@@ -212,10 +220,17 @@ class AuthStateNotifier extends ChangeNotifier {
 
   String _mapFirebaseAuthError(fb.FirebaseAuthException e) {
     switch (e.code) {
+      case 'operation-not-allowed':
+        return 'Google Sign-In is disabled in Firebase Console. Please enable Google in Firebase Console > Authentication > Sign-in providers.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with this email using a different sign-in method.';
+      case 'invalid-credential':
+        return 'Invalid credentials. Please check and try again.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
       case 'user-not-found':
         return 'No account found with this email address.';
       case 'wrong-password':
-      case 'invalid-credential':
         return 'Incorrect password. Please try again.';
       case 'email-already-in-use':
         return 'An account already exists for this email.';
@@ -223,14 +238,12 @@ class AuthStateNotifier extends ChangeNotifier {
         return 'Please enter a valid email address.';
       case 'weak-password':
         return 'Password must be at least 6 characters long.';
-      case 'user-disabled':
-        return 'This account has been disabled. Please contact support.';
       case 'too-many-requests':
         return 'Too many attempts. Please wait a moment and try again.';
       case 'network-request-failed':
         return 'Network connection error. Please check your internet connection.';
       default:
-        return e.message ?? 'An authentication error occurred.';
+        return e.message ?? 'Authentication error (${e.code}).';
     }
   }
 
