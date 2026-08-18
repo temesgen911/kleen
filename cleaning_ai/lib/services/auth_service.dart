@@ -10,6 +10,7 @@ import '../firebase_options.dart';
 class AuthService {
   FirebaseAuth? _auth;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile'],
     clientId: kIsWeb
         ? null
         : (defaultTargetPlatform == TargetPlatform.iOS
