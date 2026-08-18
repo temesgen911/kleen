@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../services/auth_state_notifier.dart';
+import '../../widgets/google_logo_icon.dart';
 import '../splash/cleaning_logo_painter.dart';
 import 'signup_screen.dart';
 import 'widgets/auth_text_field.dart';
 
-/// Dark-mode luxury Login Screen for Cleaning AI.
+/// Dark-mode luxury Login Screen for kleenai with Google Sign-In & Email Auth.
 class LoginScreen extends StatefulWidget {
   final AuthStateNotifier authNotifier;
 
@@ -25,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _isGoogleLoading = false;
 
   @override
   void initState() {
@@ -56,18 +58,38 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (!success && mounted && widget.authNotifier.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.authNotifier.errorMessage!,
-            style: AppTypography.bodyMedium.copyWith(color: Colors.white),
-          ),
-          backgroundColor: AppColors.accentCoral.withValues(alpha: 0.95),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      _showErrorSnackBar(widget.authNotifier.errorMessage!);
     }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      final success = await widget.authNotifier.signInWithGoogle();
+      if (!success && mounted && widget.authNotifier.errorMessage != null) {
+        _showErrorSnackBar(widget.authNotifier.errorMessage!);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+        ),
+        backgroundColor: AppColors.accentCoral.withValues(alpha: 0.95),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   void _showForgotPasswordDialog() {
@@ -184,6 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = widget.authNotifier.isLoading;
+    final isAnyLoading = isLoading || _isGoogleLoading;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundStart,
@@ -254,7 +277,106 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 1.4,
                         ),
                       ),
-                      const SizedBox(height: 36),
+                      const SizedBox(height: 32),
+
+                      // Google Sign-In Button
+                      Container(
+                        height: 54,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: AppColors.surfaceDark.withValues(alpha: 0.85),
+                          border: Border.all(
+                            color: AppColors.borderWhite.withValues(alpha: 0.2),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: isAnyLoading ? null : _handleGoogleSignIn,
+                            child: Center(
+                              child: _isGoogleLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: AppColors.primaryTeal,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const GoogleLogoIcon(size: 22),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'Continue with Google',
+                                          style: AppTypography.titleMedium.copyWith(
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.2,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Elegant Divider
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.borderWhite.withValues(alpha: 0.05),
+                                    AppColors.borderWhite.withValues(alpha: 0.3),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Text(
+                              'OR',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.borderWhite.withValues(alpha: 0.3),
+                                    AppColors.borderWhite.withValues(alpha: 0.05),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
 
                       // Email Field
                       AuthTextField(
@@ -273,7 +395,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 18),
 
                       // Password Field
                       AuthTextField(
@@ -306,7 +428,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
 
                       // Forgot Password Link
                       Align(
@@ -325,11 +447,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
 
                       // Sign In Button
                       Container(
-                        height: 56,
+                        height: 54,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           gradient: const LinearGradient(
@@ -347,7 +469,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: isLoading ? null : _handleSignIn,
+                          onPressed: isAnyLoading ? null : _handleSignIn,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -357,24 +479,25 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: isLoading
                               ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
+                                  width: 22,
+                                  height: 22,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
                                     color: AppColors.backgroundStart,
                                   ),
                                 )
                               : Text(
-                                  'Sign In',
+                                  'Sign In with Email',
                                   style: AppTypography.titleMedium.copyWith(
                                     color: AppColors.backgroundStart,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 0.5,
+                                    fontSize: 15,
                                   ),
                                 ),
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 28),
 
                       // Sign Up Option
                       Wrap(
@@ -384,19 +507,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           Text(
                             "Don't have an account?",
                             style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
+                              color: AppColors.textMuted,
                             ),
                           ),
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (context) => SignUpScreen(
-                                    authNotifier: widget.authNotifier,
-                                  ),
+                                  builder: (_) => SignUpScreen(authNotifier: widget.authNotifier),
                                 ),
                               );
                             },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
                             child: Text(
                               'Create Account',
                               style: AppTypography.bodyMedium.copyWith(

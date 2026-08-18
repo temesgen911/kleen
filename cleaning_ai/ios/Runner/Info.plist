@@ -6,6 +6,17 @@
 	<string>kleenai needs camera access to scan your room and detect cleanable items.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>kleenai needs photo library access to import room photos for cleaning analysis.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.30408461674-behuqgg4crrcecjkfn9669m8b6q1babc</string>
+			</array>
+		</dict>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

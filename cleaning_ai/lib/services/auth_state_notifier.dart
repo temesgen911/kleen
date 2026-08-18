@@ -74,6 +74,35 @@ class AuthStateNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sign in with Google.
+  Future<bool> signInWithGoogle() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final credential = await _authService.signInWithGoogle();
+      if (credential == null) {
+        // User cancelled Google sign-in
+        _setLoading(false);
+        return false;
+      }
+      if (credential.user != null) {
+        await _syncWithBackend(credential.user!);
+      }
+      _setLoading(false);
+      return true;
+    } on fb.FirebaseAuthException catch (e) {
+      _setError(_mapFirebaseAuthError(e));
+      _setLoading(false);
+      return false;
+    } catch (e) {
+      developer.log('Google sign-in error: $e', name: 'AuthStateNotifier');
+      _setError('Failed to sign in with Google. Please try again.');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   /// Sign in with email and password.
   Future<bool> signIn({required String email, required String password}) async {
     _setLoading(true);

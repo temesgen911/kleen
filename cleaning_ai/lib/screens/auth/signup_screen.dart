@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../services/auth_state_notifier.dart';
+import '../../widgets/google_logo_icon.dart';
 import '../splash/cleaning_logo_painter.dart';
 import 'widgets/auth_text_field.dart';
 
-/// Dark-mode luxury Sign Up / Account Creation Screen for Cleaning AI.
+/// Dark-mode luxury Sign Up / Account Creation Screen for kleenai with Google & Email Auth.
 class SignUpScreen extends StatefulWidget {
   final AuthStateNotifier authNotifier;
 
@@ -27,6 +28,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isGoogleLoading = false;
 
   @override
   void initState() {
@@ -78,6 +80,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignUp() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      final success = await widget.authNotifier.signInWithGoogle();
+      if (success && mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else if (!success && mounted && widget.authNotifier.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.authNotifier.errorMessage!,
+              style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+            ),
+            backgroundColor: AppColors.accentCoral.withValues(alpha: 0.95),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
+    }
+  }
+
   double _calculatePasswordStrength(String password) {
     if (password.isEmpty) return 0.0;
     double strength = 0.0;
@@ -105,6 +135,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = widget.authNotifier.isLoading;
+    final isAnyLoading = isLoading || _isGoogleLoading;
     final passwordStrength = _calculatePasswordStrength(_passwordController.text);
 
     return Scaffold(
@@ -183,7 +214,106 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
+
+                      // Google Sign Up Button
+                      Container(
+                        height: 54,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: AppColors.surfaceDark.withValues(alpha: 0.85),
+                          border: Border.all(
+                            color: AppColors.borderWhite.withValues(alpha: 0.2),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: isAnyLoading ? null : _handleGoogleSignUp,
+                            child: Center(
+                              child: _isGoogleLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: AppColors.primaryTeal,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const GoogleLogoIcon(size: 22),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'Sign Up with Google',
+                                          style: AppTypography.titleMedium.copyWith(
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.2,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Elegant Divider
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.borderWhite.withValues(alpha: 0.05),
+                                    AppColors.borderWhite.withValues(alpha: 0.3),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Text(
+                              'OR',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textMuted,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              height: 1,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.borderWhite.withValues(alpha: 0.3),
+                                    AppColors.borderWhite.withValues(alpha: 0.05),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
 
                       // Full Name Field
                       AuthTextField(
@@ -199,7 +329,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
 
                       // Email Field
                       AuthTextField(
@@ -219,7 +349,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
 
                       // Password Field
                       AuthTextField(
@@ -282,7 +412,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ],
                         ),
                       ],
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
 
                       // Confirm Password Field
                       AuthTextField(
@@ -315,11 +445,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
 
                       // Create Account Button
                       Container(
-                        height: 56,
+                        height: 54,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           gradient: const LinearGradient(
@@ -337,7 +467,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: isLoading ? null : _handleSignUp,
+                          onPressed: isAnyLoading ? null : _handleSignUp,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -347,19 +477,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           child: isLoading
                               ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
+                                  width: 22,
+                                  height: 22,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
                                     color: AppColors.backgroundStart,
                                   ),
                                 )
                               : Text(
-                                  'Create Account',
+                                  'Create Account with Email',
                                   style: AppTypography.titleMedium.copyWith(
                                     color: AppColors.backgroundStart,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 0.5,
+                                    fontSize: 15,
                                   ),
                                 ),
                         ),

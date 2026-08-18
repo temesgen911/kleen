@@ -2,10 +2,14 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_sign_in/google_sign_in.dart';
+import '../firebase_options.dart';
 
-/// Service managing Firebase Authentication operations.
+/// Service managing Firebase Authentication & Google Sign-In operations.
 class AuthService {
   FirebaseAuth? _auth;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   bool _initialized = false;
 
   final StreamController<User?> _fallbackAuthStateController =
@@ -19,13 +23,18 @@ class AuthService {
   Future<void> _initFirebase() async {
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
       }
       _auth = FirebaseAuth.instance;
       _initialized = true;
       developer.log('Firebase Auth initialized successfully.', name: 'AuthService');
     } catch (e) {
-      developer.log('Firebase Core not yet configured natively: $e. Using resilient fallback.', name: 'AuthService');
+      developer.log(
+        'Firebase Core initialization notice: $e. Using resilient fallback.',
+        name: 'AuthService',
+      );
       _initialized = false;
     }
   }
@@ -55,6 +64,47 @@ class AuthService {
       return 'mock_token_${_mockCurrentUser!.uid}';
     }
     return null;
+  }
+
+  /// Sign in with Google identity provider.
+  Future<UserCredential?> signInWithGoogle() async {
+    await _ensureInitialized();
+
+    if (_auth != null && _initialized) {
+      try {
+        if (kIsWeb) {
+          final GoogleAuthProvider authProvider = GoogleAuthProvider();
+          return await _auth!.signInWithPopup(authProvider);
+        } else {
+          final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+          if (googleUser == null) {
+            // User cancelled Google Sign-In
+            return null;
+          }
+
+          final GoogleSignInAuthentication googleAuth =
+              await googleUser.authentication;
+
+          final AuthCredential credential = GoogleAuthProvider.credential(
+            idToken: googleAuth.idToken,
+            accessToken: googleAuth.accessToken,
+          );
+
+          return await _auth!.signInWithCredential(credential);
+        }
+      } catch (e) {
+        developer.log('Google Sign In error: $e', name: 'AuthService');
+        rethrow;
+      }
+    }
+
+    // Resilient simulated fallback for testing environments
+    _mockCurrentUser = createMockUser(
+      email: 'google.user@example.com',
+      displayName: 'Google Cleaner',
+    );
+    _fallbackAuthStateController.add(_mockCurrentUser);
+    return _MockUserCredential(_mockCurrentUser!);
   }
 
   /// Sign in with email and password.
@@ -117,6 +167,13 @@ class AuthService {
   /// Sign out current user.
   Future<void> signOut() async {
     if (_auth != null && _initialized) {
+      try {
+        if (!kIsWeb) {
+          await _googleSignIn.signOut();
+        }
+      } catch (e) {
+        developer.log('GoogleSignIn signOut notice: $e', name: 'AuthService');
+      }
       await _auth!.signOut();
     }
     _mockCurrentUser = null;

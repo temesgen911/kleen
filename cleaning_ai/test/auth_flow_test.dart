@@ -13,6 +13,7 @@ import 'package:cleaning_ai/screens/auth/signup_screen.dart';
 import 'package:cleaning_ai/screens/auth/auth_gate.dart';
 import 'package:cleaning_ai/screens/profile/profile_screen.dart';
 import 'package:cleaning_ai/screens/home/home_screen.dart';
+import 'package:cleaning_ai/widgets/google_logo_icon.dart';
 
 class _TestAuthService extends AuthService {
   User? _simUser;
@@ -22,6 +23,15 @@ class _TestAuthService extends AuthService {
 
   @override
   Future<String?> getIdToken([bool forceRefresh = false]) async => 'mock_token_123';
+
+  @override
+  Future<UserCredential?> signInWithGoogle() async {
+    _simUser = createMockUser(
+      email: 'google.cleaner@example.com',
+      displayName: 'Google Cleaner',
+    );
+    return _MockUserCredential(_simUser!);
+  }
 
   @override
   Future<UserCredential> signInWithEmailAndPassword({
@@ -64,12 +74,13 @@ AuthStateNotifier _createTestAuthNotifier({String? defaultEmail, String? default
   final backendService = BackendUserService(
     httpClient: MockClient((req) async {
       final userEmail = testAuthService.currentUser?.email ?? defaultEmail ?? 'emma@example.com';
+      final userName = testAuthService.currentUser?.displayName ?? defaultName ?? 'Emma Watson';
       return http.Response(
         json.encode({
           'id': 'test-uuid-123',
           'firebaseUid': 'test-uid-123',
           'email': userEmail,
-          'displayName': defaultName ?? 'Emma Watson',
+          'displayName': userName,
           'timezone': 'UTC',
           'createdAt': '2026-08-17T12:00:00.000Z',
         }),
@@ -120,6 +131,21 @@ void main() {
         createdAt: DateTime.now(),
       );
       expect(user.effectiveDisplayName, 'alex.smith');
+    });
+  });
+
+  group('GoogleLogoIcon Widget Tests', () {
+    testWidgets('Renders GoogleLogoIcon vector CustomPainter cleanly', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(child: GoogleLogoIcon(size: 24)),
+          ),
+        ),
+      );
+
+      expect(find.byType(GoogleLogoIcon), findsOneWidget);
+      expect(find.byType(CustomPaint), findsWidgets);
     });
   });
 
@@ -220,6 +246,19 @@ void main() {
 
       notifier.dispose();
     });
+
+    test('Google Sign In authenticates and updates user state', () async {
+      final notifier = _createTestAuthNotifier();
+
+      final success = await notifier.signInWithGoogle();
+
+      expect(success, isTrue);
+      expect(notifier.isAuthenticated, isTrue);
+      expect(notifier.currentUser?.email, 'google.cleaner@example.com');
+      expect(notifier.currentUser?.displayName, 'Google Cleaner');
+
+      notifier.dispose();
+    });
   });
 
   group('Auth UI Widget Tests', () {
@@ -237,11 +276,12 @@ void main() {
       );
 
       expect(find.text('Welcome to kleenai'), findsOneWidget);
-      expect(find.text('Sign In'), findsOneWidget);
+      expect(find.text('Continue with Google'), findsOneWidget);
+      expect(find.text('Sign In with Email'), findsOneWidget);
       expect(find.text('Create Account'), findsOneWidget);
 
       // Attempt to submit empty form
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In with Email'));
       await tester.pump();
 
       expect(find.text('Please enter your email address.'), findsOneWidget);
@@ -251,7 +291,7 @@ void main() {
       await tester.enterText(find.byType(TextFormField).first, 'emma@example.com');
       await tester.enterText(find.byType(TextFormField).last, 'secret123');
 
-      final submitBtn = find.widgetWithText(ElevatedButton, 'Sign In');
+      final submitBtn = find.widgetWithText(ElevatedButton, 'Sign In with Email');
       await tester.ensureVisible(submitBtn);
       await tester.tap(submitBtn);
       await tester.pump();
@@ -262,8 +302,34 @@ void main() {
       authNotifier.dispose();
     });
 
+    testWidgets('LoginScreen handles Continue with Google tap', (tester) async {
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final authNotifier = _createTestAuthNotifier();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LoginScreen(authNotifier: authNotifier),
+        ),
+      );
+
+      final googleBtn = find.text('Continue with Google');
+      expect(googleBtn, findsOneWidget);
+
+      await tester.tap(googleBtn);
+      await tester.pump();
+      await tester.pump();
+
+      expect(authNotifier.isAuthenticated, isTrue);
+      expect(authNotifier.currentUser?.email, 'google.cleaner@example.com');
+
+      authNotifier.dispose();
+    });
+
     testWidgets('SignUpScreen validates password match and strength', (tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.physicalSize = const Size(800, 1500);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
@@ -276,6 +342,8 @@ void main() {
       );
 
       expect(find.text('Create Account'), findsWidgets);
+      expect(find.text('Sign Up with Google'), findsOneWidget);
+      expect(find.text('Create Account with Email'), findsOneWidget);
 
       // Fill in mismatching passwords
       await tester.enterText(find.byType(TextFormField).at(0), 'Emma Watson');
@@ -288,7 +356,7 @@ void main() {
       expect(find.text('Strong'), findsOneWidget);
 
       // Attempt to submit
-      final buttonFinder = find.widgetWithText(ElevatedButton, 'Create Account');
+      final buttonFinder = find.widgetWithText(ElevatedButton, 'Create Account with Email');
       await tester.ensureVisible(buttonFinder);
       await tester.tap(buttonFinder);
       await tester.pump();
@@ -303,6 +371,32 @@ void main() {
       await tester.pump();
 
       expect(authNotifier.isAuthenticated, isTrue);
+
+      authNotifier.dispose();
+    });
+
+    testWidgets('SignUpScreen handles Sign Up with Google tap', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final authNotifier = _createTestAuthNotifier();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SignUpScreen(authNotifier: authNotifier),
+        ),
+      );
+
+      final googleBtn = find.text('Sign Up with Google');
+      expect(googleBtn, findsOneWidget);
+
+      await tester.tap(googleBtn);
+      await tester.pump();
+      await tester.pump();
+
+      expect(authNotifier.isAuthenticated, isTrue);
+      expect(authNotifier.currentUser?.email, 'google.cleaner@example.com');
 
       authNotifier.dispose();
     });
