@@ -15,6 +15,7 @@ class AuthService {
         : (defaultTargetPlatform == TargetPlatform.iOS
             ? '30408461674-behuqgg4crrcecjkfn9669m8b6q1babc.apps.googleusercontent.com'
             : null),
+    serverClientId: '30408461674-pu87jgp8ivch0fgafdpjpiprsl3nnqdau.apps.googleusercontent.com',
   );
   bool _initialized = false;
 
