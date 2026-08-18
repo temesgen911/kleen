@@ -15,7 +15,6 @@ class AuthService {
         : (defaultTargetPlatform == TargetPlatform.iOS
             ? '30408461674-behuqgg4crrcecjkfn9669m8b6q1babc.apps.googleusercontent.com'
             : null),
-    serverClientId: '30408461674-pu87jgp8ivch0fgafdpjpiprsl3nnqdau.apps.googleusercontent.com',
   );
   bool _initialized = false;
 
@@ -36,10 +35,10 @@ class AuthService {
       }
       _auth = FirebaseAuth.instance;
       _initialized = true;
-      developer.log('Firebase Auth initialized successfully.', name: 'AuthService');
-    } catch (e) {
+      developer.log('[AuthService] Firebase Auth initialized successfully with project ${Firebase.app().options.projectId}.', name: 'AuthService');
+    } catch (e, stack) {
       developer.log(
-        'Firebase Core initialization notice: $e. Using resilient fallback.',
+        '[AuthService] Firebase Core initialization notice: $e\n$stack',
         name: 'AuthService',
       );
       _initialized = false;
@@ -80,31 +79,35 @@ class AuthService {
     if (_auth != null && _initialized) {
       try {
         if (kIsWeb) {
+          developer.log('[AuthService] Initiating Web Google popup sign in...', name: 'AuthService');
           final GoogleAuthProvider authProvider = GoogleAuthProvider();
           return await _auth!.signInWithPopup(authProvider);
         } else {
-          developer.log('Triggering GoogleSignIn.signIn()...', name: 'AuthService');
+          developer.log('[AuthService] Initiating Google Sign-In with clientId 30408461674-behuqgg4crrcecjkfn9669m8b6q1babc...', name: 'AuthService');
           final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
           if (googleUser == null) {
-            developer.log('Google Sign-In dismissed/cancelled by user.', name: 'AuthService');
+            developer.log('[AuthService] Google Sign-In dismissed/cancelled by user.', name: 'AuthService');
             return null;
           }
 
-          developer.log('Google account selected: ${googleUser.email}', name: 'AuthService');
+          developer.log('[AuthService] Google account selected: ${googleUser.email}', name: 'AuthService');
           final GoogleSignInAuthentication googleAuth =
               await googleUser.authentication;
+
+          developer.log('[AuthService] Auth tokens retrieved - idToken present: ${googleAuth.idToken != null}, accessToken present: ${googleAuth.accessToken != null}', name: 'AuthService');
 
           final AuthCredential credential = GoogleAuthProvider.credential(
             idToken: googleAuth.idToken,
             accessToken: googleAuth.accessToken,
           );
 
+          developer.log('[AuthService] Calling FirebaseAuth.signInWithCredential...', name: 'AuthService');
           final userCred = await _auth!.signInWithCredential(credential);
-          developer.log('Firebase user successfully signed in with Google: ${userCred.user?.uid}', name: 'AuthService');
+          developer.log('[AuthService] Firebase user successfully signed in with Google! UID: ${userCred.user?.uid}, email: ${userCred.user?.email}', name: 'AuthService');
           return userCred;
         }
-      } catch (e) {
-        developer.log('Google Sign In error: $e', name: 'AuthService');
+      } catch (e, stack) {
+        developer.log('[AuthService] Google Sign In error: $e\n$stack', name: 'AuthService');
         rethrow;
       }
     }
