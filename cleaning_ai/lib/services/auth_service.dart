@@ -11,11 +11,6 @@ class AuthService {
   FirebaseAuth? _auth;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    clientId: kIsWeb
-        ? null
-        : (defaultTargetPlatform == TargetPlatform.iOS
-            ? '30408461674-behuqgg4crrcecjkfn9669m8b6q1babc.apps.googleusercontent.com'
-            : null),
   );
   bool _initialized = false;
 
@@ -81,37 +76,27 @@ class AuthService {
           final GoogleAuthProvider authProvider = GoogleAuthProvider();
           return await _auth!.signInWithPopup(authProvider);
         } else {
-          debugPrint('[KleenAI Auth] Initiating Google Sign-In via Firebase Auth Provider...');
-          try {
-            final GoogleAuthProvider authProvider = GoogleAuthProvider();
-            authProvider.addScope('email');
-            authProvider.addScope('profile');
-            final userCred = await _auth!.signInWithProvider(authProvider);
-            debugPrint('[KleenAI Auth] ✅ Firebase Google Sign-In SUCCESS! UID: ${userCred.user?.uid}, Email: ${userCred.user?.email}');
-            return userCred;
-          } catch (providerErr) {
-            debugPrint('[KleenAI Auth] Firebase Provider sign-in notice: $providerErr. Attempting native GoogleSignIn fallback...');
-            final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-            if (googleUser == null) {
-              debugPrint('[KleenAI Auth] Google Sign-In prompt was dismissed by user.');
-              return null;
-            }
-
-            debugPrint('[KleenAI Auth] Google Account selected: ${googleUser.email}');
-            final GoogleSignInAuthentication googleAuth =
-                await googleUser.authentication;
-
-            debugPrint('[KleenAI Auth] Google Tokens retrieved - idToken: ${googleAuth.idToken != null}, accessToken: ${googleAuth.accessToken != null}');
-
-            final AuthCredential credential = GoogleAuthProvider.credential(
-              idToken: googleAuth.idToken,
-              accessToken: googleAuth.accessToken,
-            );
-
-            final userCred = await _auth!.signInWithCredential(credential);
-            debugPrint('[KleenAI Auth] ✅ Firebase Google Sign-In SUCCESS! UID: ${userCred.user?.uid}, Email: ${userCred.user?.email}');
-            return userCred;
+          debugPrint('[KleenAI Auth] Initiating native Google Sign-In prompt...');
+          final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+          if (googleUser == null) {
+            debugPrint('[KleenAI Auth] Google Sign-In prompt was dismissed by user.');
+            return null;
           }
+
+          debugPrint('[KleenAI Auth] Google Account selected: ${googleUser.email}');
+          final GoogleSignInAuthentication googleAuth =
+              await googleUser.authentication;
+
+          debugPrint('[KleenAI Auth] Google Tokens retrieved - idToken: ${googleAuth.idToken != null}, accessToken: ${googleAuth.accessToken != null}');
+
+          final AuthCredential credential = GoogleAuthProvider.credential(
+            idToken: googleAuth.idToken,
+            accessToken: googleAuth.accessToken,
+          );
+
+          final userCred = await _auth!.signInWithCredential(credential);
+          debugPrint('[KleenAI Auth] ✅ Firebase Google Sign-In SUCCESS! UID: ${userCred.user?.uid}, Email: ${userCred.user?.email}');
+          return userCred;
         }
       } catch (e, stack) {
         debugPrint('[KleenAI Auth] ❌ Google Sign-In Error: $e\n$stack');
