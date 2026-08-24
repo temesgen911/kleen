@@ -113,6 +113,29 @@ class AuthService {
     return _MockUserCredential(_mockCurrentUser!);
   }
 
+  /// Sign in as a Guest (Anonymous / Quick Demo user).
+  Future<UserCredential?> signInAsGuest() async {
+    await _ensureInitialized();
+
+    if (_auth != null && _initialized) {
+      try {
+        debugPrint('[KleenAI Auth] Initiating Firebase Anonymous Guest Sign-In...');
+        final userCred = await _auth!.signInAnonymously();
+        debugPrint('[KleenAI Auth] ✅ Firebase Guest Sign-In SUCCESS! UID: ${userCred.user?.uid}');
+        return userCred;
+      } catch (e) {
+        debugPrint('[KleenAI Auth] Firebase Anonymous sign-in notice: $e. Falling back to mock guest user...');
+      }
+    }
+
+    _mockCurrentUser = createMockUser(
+      email: 'guest@kleenai.app',
+      displayName: 'Guest User',
+    );
+    _fallbackAuthStateController.add(_mockCurrentUser);
+    return _MockUserCredential(_mockCurrentUser!);
+  }
+
   /// Sign in with email and password.
   Future<UserCredential> signInWithEmailAndPassword({
     required String email,

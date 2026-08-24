@@ -27,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   bool _isGoogleLoading = false;
+  bool _isGuestLoading = false;
 
   @override
   void initState() {
@@ -74,6 +75,22 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) {
         setState(() => _isGoogleLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleGuestSignIn() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _isGuestLoading = true);
+
+    try {
+      final success = await widget.authNotifier.signInAsGuest();
+      if (!success && mounted && widget.authNotifier.errorMessage != null) {
+        _showErrorSnackBar(widget.authNotifier.errorMessage!);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGuestLoading = false);
       }
     }
   }
@@ -206,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = widget.authNotifier.isLoading;
-    final isAnyLoading = isLoading || _isGoogleLoading;
+    final isAnyLoading = isLoading || _isGoogleLoading || _isGuestLoading;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundStart,
@@ -324,6 +341,57 @@ class _LoginScreenState extends State<LoginScreen> {
                                             fontWeight: FontWeight.w600,
                                             letterSpacing: 0.2,
                                             fontSize: 15,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Continue as Guest Button
+                      Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: AppColors.primaryTeal.withValues(alpha: 0.12),
+                          border: Border.all(
+                            color: AppColors.primaryTeal.withValues(alpha: 0.4),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: isAnyLoading ? null : _handleGuestSignIn,
+                            child: Center(
+                              child: _isGuestLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: AppColors.primaryTeal,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.person_outline_rounded,
+                                          size: 20,
+                                          color: AppColors.primaryTeal,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          'Continue as Guest',
+                                          style: AppTypography.titleMedium.copyWith(
+                                            color: AppColors.primaryTeal,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
                                           ),
                                         ),
                                       ],

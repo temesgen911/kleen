@@ -34,6 +34,15 @@ class _TestAuthService extends AuthService {
   }
 
   @override
+  Future<UserCredential?> signInAsGuest() async {
+    _simUser = createMockUser(
+      email: 'guest@kleenai.app',
+      displayName: 'Guest User',
+    );
+    return _MockUserCredential(_simUser!);
+  }
+
+  @override
   Future<UserCredential> signInWithEmailAndPassword({
     required String email,
     required String password,

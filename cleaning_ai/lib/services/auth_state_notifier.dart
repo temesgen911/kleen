@@ -115,6 +115,34 @@ class AuthStateNotifier extends ChangeNotifier {
     }
   }
 
+  /// Sign in as Guest / Demo account.
+  Future<bool> signInAsGuest() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      debugPrint('[KleenAI Auth] Attempting Guest Sign-In...');
+      final credential = await _authService.signInAsGuest();
+      if (credential != null && credential.user != null) {
+        debugPrint('[KleenAI Auth] Guest Sign-In succeeded, syncing backend...');
+        await _syncWithBackend(credential.user!);
+      } else {
+        final guestFbUser = _authService.createMockUser(
+          email: 'guest@kleenai.app',
+          displayName: 'Guest User',
+        );
+        await _syncWithBackend(guestFbUser);
+      }
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      debugPrint('[KleenAI Auth] ❌ Error during Guest sign-in: $e');
+      _setError('Failed to sign in as guest. Please try again.');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   /// Sign in with email and password.
   Future<bool> signIn({required String email, required String password}) async {
     _setLoading(true);
