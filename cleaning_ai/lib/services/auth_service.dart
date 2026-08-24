@@ -11,6 +11,7 @@ class AuthService {
   FirebaseAuth? _auth;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
+    serverClientId: '30408461674-pu87jgp8ivch0fgafdpjpiprsl3nnqdau.apps.googleusercontent.com',
   );
   bool _initialized = false;
 
