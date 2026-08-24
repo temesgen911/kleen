@@ -11,11 +11,6 @@ class AuthService {
   FirebaseAuth? _auth;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    clientId: kIsWeb
-        ? null
-        : (defaultTargetPlatform == TargetPlatform.iOS
-            ? '30408461674-behuqgg4crrcecjkfn9669m8b6q1babc.apps.googleusercontent.com'
-            : null),
   );
   bool _initialized = false;
 
