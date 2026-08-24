@@ -39,6 +39,16 @@ class KleenAIApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: const SplashScreen(),
+      onGenerateRoute: (settings) {
+        // Gracefully absorb Firebase Auth deep-link redirect callback URLs
+        if (settings.name != null && (settings.name!.contains('/link') || settings.name!.contains('auth/callback'))) {
+          return PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const SizedBox.shrink(),
+            transitionDuration: Duration.zero,
+          );
+        }
+        return null;
+      },
     );
   }
 }
