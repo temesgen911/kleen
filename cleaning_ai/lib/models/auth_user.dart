@@ -4,6 +4,7 @@ class AuthUser {
   final String firebaseUid;
   final String? email;
   final String? displayName;
+  final String? photoUrl;
   final String timezone;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -13,6 +14,7 @@ class AuthUser {
     required this.firebaseUid,
     this.email,
     this.displayName,
+    this.photoUrl,
     this.timezone = 'UTC',
     required this.createdAt,
     this.updatedAt,
@@ -25,7 +27,7 @@ class AuthUser {
     if (email != null && email!.contains('@')) {
       return email!.split('@').first;
     }
-    return 'Emma';
+    return 'User';
   }
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,7 @@ class AuthUser {
       firebaseUid: (json['firebaseUid'] ?? json['firebase_uid']) as String? ?? '',
       email: json['email'] as String?,
       displayName: (json['displayName'] ?? json['display_name']) as String?,
+      photoUrl: (json['photoUrl'] ?? json['photo_url']) as String?,
       timezone: json['timezone'] as String? ?? 'UTC',
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
@@ -54,6 +57,7 @@ class AuthUser {
       'firebaseUid': firebaseUid,
       'email': email,
       'displayName': displayName,
+      'photoUrl': photoUrl,
       'timezone': timezone,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
@@ -65,6 +69,7 @@ class AuthUser {
     String? firebaseUid,
     String? email,
     String? displayName,
+    String? photoUrl,
     String? timezone,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -74,6 +79,7 @@ class AuthUser {
       firebaseUid: firebaseUid ?? this.firebaseUid,
       email: email ?? this.email,
       displayName: displayName ?? this.displayName,
+      photoUrl: photoUrl ?? this.photoUrl,
       timezone: timezone ?? this.timezone,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -81,5 +87,5 @@ class AuthUser {
   }
 
   @override
-  String toString() => 'AuthUser(id: $id, firebaseUid: $firebaseUid, email: $email, name: $displayName)';
+  String toString() => 'AuthUser(id: $id, firebaseUid: $firebaseUid, email: $email, name: $displayName, photoUrl: $photoUrl)';
 }

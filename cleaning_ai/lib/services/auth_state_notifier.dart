@@ -52,28 +52,62 @@ class AuthStateNotifier extends ChangeNotifier {
         displayName: fbUser.displayName,
       );
 
-      _currentUser = syncedProfile ??
+      final photo = fbUser.photoURL ?? syncedProfile?.photoUrl;
+      _currentUser = (syncedProfile ??
           AuthUser(
             id: fbUser.uid,
             firebaseUid: fbUser.uid,
             email: fbUser.email,
             displayName: fbUser.displayName,
-            timezone: 'UTC',
+            photoUrl: photo,
             createdAt: DateTime.now(),
-          );
-      debugPrint('[KleenAI Auth] ✅ User state updated: ${_currentUser?.email}');
+          )).copyWith(photoUrl: photo);
+
+      debugPrint('[KleenAI Auth] ✅ User state updated: ${_currentUser?.email} (${_currentUser?.effectiveDisplayName})');
     } catch (e) {
-      debugPrint('[KleenAI Auth] ⚠️ Error syncing user profile with backend: $e');
+      debugPrint('[KleenAI Auth] Error syncing user with backend: $e');
       _currentUser = AuthUser(
         id: fbUser.uid,
         firebaseUid: fbUser.uid,
         email: fbUser.email,
         displayName: fbUser.displayName,
-        timezone: 'UTC',
+        photoUrl: fbUser.photoURL,
         createdAt: DateTime.now(),
       );
+    } finally {
+      notifyListeners();
     }
-    notifyListeners();
+  }
+
+  /// Update current user's profile information (Display Name & Photo URL).
+  Future<bool> updateUserProfile({String? displayName, String? photoUrl}) async {
+    if (_currentUser == null) return false;
+    _setLoading(true);
+    try {
+      final fbUser = _authService.currentUser;
+      if (fbUser != null) {
+        if (displayName != null && displayName.isNotEmpty) {
+          await fbUser.updateDisplayName(displayName);
+        }
+        if (photoUrl != null) {
+          await fbUser.updatePhotoURL(photoUrl);
+        }
+        await fbUser.reload();
+      }
+      _currentUser = _currentUser!.copyWith(
+        displayName: displayName ?? _currentUser!.displayName,
+        photoUrl: photoUrl ?? _currentUser!.photoUrl,
+        updatedAt: DateTime.now(),
+      );
+      notifyListeners();
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      debugPrint('[KleenAI Auth] Error updating user profile: $e');
+      _setError('Failed to update profile details.');
+      _setLoading(false);
+      return false;
+    }
   }
 
   /// Sign in with Google.

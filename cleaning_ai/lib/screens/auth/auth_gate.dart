@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_state_notifier.dart';
-import '../home/home_screen.dart';
+import '../main_navigation_screen.dart';
 import 'login_screen.dart';
 
 /// Top-level authentication gateway that dynamically switches between
-/// LoginScreen and HomeScreen based on the current user session state.
+/// LoginScreen and MainNavigationScreen based on the current user session state.
 class AuthGate extends StatefulWidget {
   final AuthStateNotifier? authNotifier;
 
@@ -46,7 +46,7 @@ class _AuthGateState extends State<AuthGate> {
       listenable: _authNotifier,
       builder: (context, _) {
         if (_authNotifier.isAuthenticated) {
-          return HomeScreen(authNotifier: _authNotifier);
+          return MainNavigationScreen(authNotifier: _authNotifier);
         }
         return LoginScreen(authNotifier: _authNotifier);
       },

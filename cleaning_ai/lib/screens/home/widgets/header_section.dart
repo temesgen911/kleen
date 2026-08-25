@@ -5,10 +5,12 @@ import '../../../theme/app_colors.dart';
 
 class HeaderSection extends StatelessWidget {
   final String displayName;
+  final String? photoUrl;
 
   const HeaderSection({
     super.key,
-    this.displayName = 'Emma',
+    this.displayName = 'User',
+    this.photoUrl,
   });
 
   @override
@@ -21,33 +23,47 @@ class HeaderSection extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.glassTeal,
                   border: Border.all(
-                    color: AppColors.primaryTeal.withValues(alpha: 0.3),
+                    color: AppColors.primaryTeal.withValues(alpha: 0.35),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryTeal.withValues(alpha: 0.2),
-                      blurRadius: 10,
+                      color: AppColors.primaryTeal.withValues(alpha: 0.25),
+                      blurRadius: 12,
                     ),
                   ],
                 ),
                 child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Center(
-                      child: Icon(
-                        Icons.auto_awesome,
-                        color: AppColors.primaryTeal,
-                        size: 20,
-                      ),
-                    ),
-                  ),
+                  child: photoUrl != null && photoUrl!.startsWith('http')
+                      ? Image.network(
+                          photoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Text(
+                              displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+                              style: AppTypography.titleMedium.copyWith(
+                                color: AppColors.primaryTeal,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Image.asset(
+                          'assets/images/logo.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Center(
+                            child: Icon(
+                              Icons.auto_awesome,
+                              color: AppColors.primaryTeal,
+                              size: 20,
+                            ),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 10),
