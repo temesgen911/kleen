@@ -269,7 +269,61 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 22),
+                      const SizedBox(height: 12),
+
+                      // Apple Sign Up Button
+                      Container(
+                        height: 54,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: Colors.black,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: isAnyLoading
+                                ? null
+                                : () async {
+                                    FocusScope.of(context).unfocus();
+                                    final success = await widget.authNotifier.signInWithApple();
+                                    if (success && mounted) {
+                                      Navigator.of(context).popUntil((route) => route.isFirst);
+                                    }
+                                  },
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.apple, color: Colors.white, size: 24),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Sign Up with Apple',
+                                    style: AppTypography.titleMedium.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.2,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
 
                       // Elegant Divider
                       Row(

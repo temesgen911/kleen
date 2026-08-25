@@ -115,6 +115,45 @@ class AuthStateNotifier extends ChangeNotifier {
     }
   }
 
+  /// Sign in with Apple.
+  Future<bool> signInWithApple() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      debugPrint('[KleenAI Auth] Attempting Apple Sign-In...');
+      final credential = await _authService.signInWithApple();
+      if (credential == null) {
+        debugPrint('[KleenAI Auth] Apple Sign-In cancelled by user.');
+        _setLoading(false);
+        return false;
+      }
+      if (credential.user != null) {
+        debugPrint('[KleenAI Auth] Apple Sign-In succeeded, syncing backend for ${credential.user!.email}');
+        await _syncWithBackend(credential.user!);
+      }
+      _setLoading(false);
+      return true;
+    } on fb.FirebaseAuthException catch (e) {
+      debugPrint('[KleenAI Auth] ❌ Firebase Auth Exception during Apple sign-in: ${e.code} - ${e.message}');
+      _setError(_mapFirebaseAuthError(e));
+      _setLoading(false);
+      return false;
+    } catch (e) {
+      debugPrint('[KleenAI Auth] ❌ Generic Error during Apple sign-in: $e');
+      final err = e.toString();
+      if (err.contains('operation-not-allowed') || err.contains('disabled')) {
+        _setError('Apple Sign-In is disabled in Firebase Console. Enable Apple in Authentication > Sign-in method.');
+      } else if (err.contains('canceled') || err.contains('Canceled')) {
+        debugPrint('[KleenAI Auth] Apple Sign-In dismissed by user.');
+      } else {
+        _setError('Sign in with Apple error: ${err.replaceAll("Exception: ", "")}');
+      }
+      _setLoading(false);
+      return false;
+    }
+  }
+
   /// Sign in as Guest / Demo account.
   Future<bool> signInAsGuest() async {
     _setLoading(true);

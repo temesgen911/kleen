@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../firebase_options.dart';
 
 /// Service managing Firebase Authentication & Google Sign-In operations.
@@ -108,6 +109,54 @@ class AuthService {
     _mockCurrentUser = createMockUser(
       email: 'google.user@example.com',
       displayName: 'Google Cleaner',
+    );
+    _fallbackAuthStateController.add(_mockCurrentUser);
+    return _MockUserCredential(_mockCurrentUser!);
+  }
+
+  /// Sign in with Apple identity provider.
+  Future<UserCredential?> signInWithApple() async {
+    await _ensureInitialized();
+
+    if (_auth != null && _initialized) {
+      try {
+        debugPrint('[KleenAI Auth] Initiating Apple Sign-In prompt...');
+        final appleCredential = await SignInWithApple.getAppleIDCredential(
+          scopes: [
+            AppleIDAuthorizationScopes.email,
+            AppleIDAuthorizationScopes.fullName,
+          ],
+        );
+
+        final OAuthProvider provider = OAuthProvider('apple.com');
+        final AuthCredential credential = provider.credential(
+          idToken: appleCredential.identityToken,
+          rawNonce: appleCredential.state,
+        );
+
+        final userCred = await _auth!.signInWithCredential(credential);
+        
+        // Update display name if Apple provided name on first sign-in
+        final fullName = [appleCredential.givenName, appleCredential.familyName]
+            .where((n) => n != null && n.isNotEmpty)
+            .join(' ');
+        if (fullName.isNotEmpty && userCred.user != null) {
+          await userCred.user!.updateDisplayName(fullName);
+          await userCred.user!.reload();
+        }
+
+        debugPrint('[KleenAI Auth] ✅ Firebase Apple Sign-In SUCCESS! UID: ${userCred.user?.uid}, Email: ${userCred.user?.email}');
+        return userCred;
+      } catch (e, stack) {
+        debugPrint('[KleenAI Auth] ❌ Apple Sign-In Error: $e\n$stack');
+        rethrow;
+      }
+    }
+
+    // Resilient simulated fallback for testing environments & unprovisioned simulators
+    _mockCurrentUser = createMockUser(
+      email: 'apple.user@example.com',
+      displayName: 'Apple Cleaner',
     );
     _fallbackAuthStateController.add(_mockCurrentUser);
     return _MockUserCredential(_mockCurrentUser!);
