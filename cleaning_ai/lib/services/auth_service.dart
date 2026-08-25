@@ -121,6 +121,17 @@ class AuthService {
     if (_auth != null && _initialized) {
       try {
         debugPrint('[KleenAI Auth] Initiating Apple Sign-In prompt...');
+        final isAvailable = await SignInWithApple.isAvailable();
+        if (!isAvailable) {
+          debugPrint('[KleenAI Auth] Native Sign-in with Apple is unavailable on this device/platform. Using Firebase OAuth fallback...');
+          final OAuthProvider provider = OAuthProvider('apple.com');
+          if (kIsWeb) {
+            return await _auth!.signInWithPopup(provider);
+          } else {
+            return await _auth!.signInWithProvider(provider);
+          }
+        }
+
         final appleCredential = await SignInWithApple.getAppleIDCredential(
           scopes: [
             AppleIDAuthorizationScopes.email,
