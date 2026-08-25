@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../theme/app_typography.dart';
 import '../../../../models/scanner_session.dart';
+import '../../../../models/detected_item.dart';
 import 'analysis_glass_card.dart';
 
 class MockDetection {
@@ -64,12 +65,14 @@ class AIDetectFrame extends StatefulWidget {
   final String imagePath;
   final ScannerSession? session;
   final Animation<double> progressAnimation;
+  final List<DetectedItem> realDetections;
 
   const AIDetectFrame({
     super.key,
     required this.imagePath,
     this.session,
     required this.progressAnimation,
+    this.realDetections = const [],
   });
 
   @override
@@ -93,15 +96,31 @@ class _AIDetectFrameState extends State<AIDetectFrame> {
 
   void _onProgressUpdate() {
     final currentProgress = widget.progressAnimation.value;
-    final currentlyDetected = _mockDetections
-        .where((d) => currentProgress >= d.revealAtProgress)
-        .map((d) => '${d.roomName}: ${d.label}')
-        .toList();
+    
+    if (widget.realDetections.isNotEmpty) {
+      final total = widget.realDetections.length;
+      final visibleCount = (total * currentProgress).ceil().clamp(0, total);
+      final List<String> currentlyDetected = widget.realDetections
+          .take(visibleCount)
+          .map((DetectedItem d) => '${d.roomName}: ${d.name}')
+          .toList();
 
-    if (currentlyDetected.length != _detectedObjects.length) {
-      setState(() {
-        _detectedObjects = currentlyDetected;
-      });
+      if (currentlyDetected.length != _detectedObjects.length) {
+        setState(() {
+          _detectedObjects = currentlyDetected;
+        });
+      }
+    } else {
+      final currentlyDetected = _mockDetections
+          .where((d) => currentProgress >= d.revealAtProgress)
+          .map((d) => '${d.roomName}: ${d.label}')
+          .toList();
+
+      if (currentlyDetected.length != _detectedObjects.length) {
+        setState(() {
+          _detectedObjects = currentlyDetected;
+        });
+      }
     }
   }
 
@@ -198,19 +217,55 @@ class _AIDetectFrameState extends State<AIDetectFrame> {
                 animation: widget.progressAnimation,
                 builder: (context, child) {
                   return CustomPaint(
-                    painter: _DetectionPainter(
+                    painter: _RealDetectionPainter(
                       progress: widget.progressAnimation.value,
-                      detections: _mockDetections,
+                      detections: widget.realDetections,
+                      mockDetections: _mockDetections,
                     ),
                   );
                 },
               ),
             ),
 
-            // 3. Floating Label Chips with Room Tag
+            // 3. Floating Label Chips
             Positioned.fill(
               child: LayoutBuilder(
                 builder: (context, constraints) {
+                  if (widget.realDetections.isNotEmpty) {
+                    final total = widget.realDetections.length;
+                    return Stack(
+                      children: widget.realDetections.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final item = entry.value;
+                        final box = item.normalizedBoundingBox ?? [0.2, 0.3, 0.4, 0.3];
+                        final dx = constraints.maxWidth * (box[0] + box[2] / 2);
+                        final dy = constraints.maxHeight * (box[1] + box[3] / 2);
+
+                        final revealProgress = (idx + 1) / (total + 1);
+
+                        return Positioned(
+                          left: (dx - 55).clamp(8.0, constraints.maxWidth - 130),
+                          top: (dy - 44).clamp(8.0, constraints.maxHeight - 80),
+                          child: AnimatedBuilder(
+                            animation: widget.progressAnimation,
+                            builder: (context, child) {
+                              final isVisible = widget.progressAnimation.value >= revealProgress;
+                              return AnimatedOpacity(
+                                opacity: isVisible ? 1.0 : 0.0,
+                                duration: const Duration(milliseconds: 400),
+                                child: _DetectionLabel(
+                                  roomName: item.roomName,
+                                  label: item.name,
+                                  icon: _getIconForCategory(item.category),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  }
+
                   return Stack(
                     children: _mockDetections.map((detection) {
                       final dx = constraints.maxWidth * detection.anchor.dx;
@@ -326,11 +381,29 @@ class _DetectionLabel extends StatelessWidget {
   }
 }
 
-class _DetectionPainter extends CustomPainter {
-  final double progress;
-  final List<MockDetection> detections;
+IconData _getIconForCategory(ItemCategory category) {
+  switch (category) {
+    case ItemCategory.furniture:
+      return Icons.chair;
+    case ItemCategory.surfaces:
+      return Icons.grid_on;
+    case ItemCategory.electronics:
+      return Icons.tv;
+    case ItemCategory.other:
+      return Icons.auto_awesome;
+  }
+}
 
-  _DetectionPainter({required this.progress, required this.detections});
+class _RealDetectionPainter extends CustomPainter {
+  final double progress;
+  final List<DetectedItem> detections;
+  final List<MockDetection> mockDetections;
+
+  _RealDetectionPainter({
+    required this.progress,
+    required this.detections,
+    required this.mockDetections,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -348,34 +421,52 @@ class _DetectionPainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
-    for (var detection in detections) {
-      if (progress >= detection.revealAtProgress) {
-        final cx = size.width * detection.anchor.dx;
-        final cy = size.height * detection.anchor.dy;
+    if (detections.isNotEmpty) {
+      final total = detections.length;
+      for (int i = 0; i < total; i++) {
+        final revealProgress = (i + 1) / (total + 1);
+        if (progress >= revealProgress) {
+          final item = detections[i];
+          final box = item.normalizedBoundingBox ?? [0.1, 0.2, 0.4, 0.3];
+          final left = size.width * box[0];
+          final top = size.height * box[1];
+          final width = size.width * box[2];
+          final height = size.height * box[3];
 
-        // Bounding box size based on label for mock variety
-        final boxWidth = size.width * 0.25;
-        final boxHeight = size.height * 0.15;
-        final rect = Rect.fromCenter(
-            center: Offset(cx, cy), width: boxWidth, height: boxHeight);
-        final rrect =
-            RRect.fromRectAndRadius(rect, const Radius.circular(12));
+          final rect = Rect.fromLTWH(left, top, width, height);
+          final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
 
-        // Draw fill and border
-        canvas.drawRRect(rrect, fillPaint);
-        canvas.drawRRect(rrect, linePaint);
+          canvas.drawRRect(rrect, fillPaint);
+          canvas.drawRRect(rrect, linePaint);
 
-        // Draw the glowing anchor point
-        canvas.drawCircle(Offset(cx, cy), 4, glowPaint);
+          final cx = left + width / 2;
+          final cy = top + height / 2;
+          canvas.drawCircle(Offset(cx, cy), 4, glowPaint);
+        }
+      }
+    } else {
+      for (var detection in mockDetections) {
+        if (progress >= detection.revealAtProgress) {
+          final cx = size.width * detection.anchor.dx;
+          final cy = size.height * detection.anchor.dy;
 
-        // Draw a vertical connecting line to where the label sits
-        canvas.drawLine(Offset(cx, cy), Offset(cx, cy - 40), linePaint);
+          final boxWidth = size.width * 0.25;
+          final boxHeight = size.height * 0.15;
+          final rect = Rect.fromCenter(
+              center: Offset(cx, cy), width: boxWidth, height: boxHeight);
+          final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
+
+          canvas.drawRRect(rrect, fillPaint);
+          canvas.drawRRect(rrect, linePaint);
+          canvas.drawCircle(Offset(cx, cy), 4, glowPaint);
+          canvas.drawLine(Offset(cx, cy), Offset(cx, cy - 40), linePaint);
+        }
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _DetectionPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _RealDetectionPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.detections != detections;
   }
 }

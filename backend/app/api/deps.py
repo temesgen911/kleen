@@ -89,3 +89,16 @@ async def get_current_user(
     )
 
     return user
+
+
+async def get_current_user_optional(
+    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Security(bearer_scheme)],
+) -> Optional[dict]:
+    """Optional authentication dependency for endpoints that accept both authenticated and guest users."""
+    if credentials is None or not credentials.credentials:
+        return None
+    try:
+        return verify_firebase_token(credentials.credentials)
+    except Exception:
+        return None
+

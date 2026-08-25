@@ -1,8 +1,25 @@
 import '../models/detected_item.dart';
 import '../models/scanner_session.dart' show ItemCategory, RoomData;
 
+import 'remote_vision_analysis_service.dart';
+
 /// Contract for visual detection and scene analysis of captured room imagery.
 abstract class VisionAnalysisService {
+  static VisionAnalysisService? _instance;
+  static bool useMockService = false;
+
+  static VisionAnalysisService get instance {
+    if (_instance != null) return _instance!;
+    if (useMockService) {
+      return const MockVisionAnalysisService();
+    }
+    return RemoteVisionAnalysisService();
+  }
+
+  static set instance(VisionAnalysisService service) {
+    _instance = service;
+  }
+
   Future<List<DetectedItem>> analyzeRoomScan(RoomData room);
   Future<List<DetectedItem>> analyzeMultiRoomScan(List<RoomData> rooms);
 }

@@ -251,6 +251,26 @@ class ScannerSession {
 
   void addItem(ReviewItem item) => reviewItems.add(item);
 
+  void addDetectedItems(List<dynamic> items) {
+    if (items.isEmpty) return;
+    reviewItems.clear();
+    for (final item in items) {
+      final name = item.name as String;
+      final roomName = item.roomName as String;
+      final category = item.category as ItemCategory;
+      reviewItems.add(
+        ReviewItem(
+          id: item.id as String,
+          name: name,
+          roomName: roomName,
+          category: category,
+          cleaningAction: 'Wipe / Dust',
+          frequency: 'Every 7 days',
+        ),
+      );
+    }
+  }
+
   void toggleConfirmed(String id) {
     final idx = reviewItems.indexWhere((i) => i.id == id);
     if (idx != -1) {

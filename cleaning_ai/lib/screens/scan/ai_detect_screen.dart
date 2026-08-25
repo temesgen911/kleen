@@ -3,6 +3,8 @@ import 'package:camera/camera.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../models/scanner_session.dart';
+import '../../models/detected_item.dart';
+import '../../services/vision_analysis_service.dart';
 import 'widgets/scanner_header.dart';
 import 'widgets/step_progress.dart';
 import 'widgets/ai_detect_frame.dart';
@@ -29,6 +31,7 @@ class _AIDetectScreenState extends State<AIDetectScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _progressController;
   late final ScannerSession _session;
+  List<DetectedItem> _realDetections = [];
   bool _analysisComplete = false;
 
   @override
@@ -38,14 +41,29 @@ class _AIDetectScreenState extends State<AIDetectScreen>
 
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
-    )
-      ..forward()
-      ..addStatusListener((status) {
+      duration: const Duration(seconds: 5),
+    )..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           setState(() => _analysisComplete = true);
         }
       });
+
+    _startRealVisionAnalysis();
+  }
+
+  Future<void> _startRealVisionAnalysis() async {
+    _progressController.forward();
+    try {
+      final items = await VisionAnalysisService.instance.analyzeMultiRoomScan(_session.rooms);
+      if (mounted) {
+        setState(() {
+          _realDetections = items;
+        });
+        _session.addDetectedItems(items);
+      }
+    } catch (e) {
+      debugPrint('Vision analysis error: $e');
+    }
   }
 
   @override
@@ -142,6 +160,7 @@ class _AIDetectScreenState extends State<AIDetectScreen>
                         imagePath: firstPhoto,
                         session: _session,
                         progressAnimation: _progressController,
+                        realDetections: _realDetections,
                       ),
                     ),
                   ),
