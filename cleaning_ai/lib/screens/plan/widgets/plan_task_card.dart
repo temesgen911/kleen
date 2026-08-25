@@ -148,6 +148,32 @@ class PlanTaskCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
+
+                        // Frequency Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: AppColors.categoryGold
+                                .withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: AppColors.categoryGold
+                                  .withValues(alpha: 0.3),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Text(
+                            task.frequency.displayName,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.categoryGold,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+
                         Icon(Icons.schedule,
                             size: 11, color: AppColors.primaryTeal),
                         const SizedBox(width: 3),
@@ -159,21 +185,21 @@ class PlanTaskCard extends StatelessWidget {
                             fontSize: 11,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '• ${task.sourceItem.frequency}',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textSecondary
-                                  .withValues(alpha: 0.7),
-                              fontSize: 10,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
                       ],
                     ),
+                    if (task.aiTip != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '💡 ${task.aiTip}',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary.withValues(alpha: 0.85),
+                          fontSize: 10,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ],
                 ),
               ),

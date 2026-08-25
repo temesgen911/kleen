@@ -25,6 +25,7 @@ class WeeklyPlanScreen extends StatefulWidget {
 class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
   late CleaningPlan _plan;
   bool _isAccepting = false;
+  int _selectedWeek = 1;
 
   @override
   void initState() {
@@ -79,6 +80,21 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
           },
         ),
         duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _onRescheduleMissedDays() {
+    _plan.autoRescheduleMissedDays(weekNumber: _selectedWeek);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.primaryTeal,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        content: const Text(
+          '⚡ Missed tasks auto-redistributed across remaining days!',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
@@ -143,12 +159,15 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final missedDays = _plan.getMissedDays(weekNumber: _selectedWeek);
+
     return Scaffold(
       backgroundColor: AppColors.backgroundStart,
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(),
+            if (missedDays.isNotEmpty) _buildMissedDaysBanner(missedDays),
             Expanded(
               child: Stack(
                 children: [
@@ -159,7 +178,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
                     children: WeekDay.values.map((day) {
                       return DaySection(
                         day: day,
-                        tasks: _plan.getTasksForDay(day),
+                        tasks: _plan.getTasksForDay(day, weekNumber: _selectedWeek),
                         onTaskDropped: _handleTaskDropped,
                         onTaskDeleted: _handleTaskDeleted,
                       );
@@ -211,6 +230,55 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
     );
   }
 
+  Widget _buildMissedDaysBanner(List<WeekDay> missedDays) {
+    final dayStr = missedDays.map((d) => d.displayName).join(', ');
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.categoryOrange.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.categoryOrange.withValues(alpha: 0.4),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppColors.categoryOrange, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Missed $dayStr tasks.',
+              style: AppTypography.bodySmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: _onRescheduleMissedDays,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primaryTeal,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '⚡ Catch Up',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.backgroundStart,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 16, 8),
@@ -240,8 +308,46 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Optimized across your scanned rooms and schedule.',
+                  'AI Multi-Week Schedule & Recurrence Load Balancing',
                   style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 10),
+
+                // Multi-Week Selector (Week 1 - Week 4)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(4, (index) {
+                      final weekNum = index + 1;
+                      final isSelected = _selectedWeek == weekNum;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            'Week $weekNum',
+                            style: AppTypography.caption.copyWith(
+                              color: isSelected ? AppColors.backgroundStart : Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: AppColors.primaryTeal,
+                          backgroundColor: AppColors.surfaceDark,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(
+                              color: isSelected ? AppColors.primaryTeal : Colors.white.withValues(alpha: 0.15),
+                            ),
+                          ),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() => _selectedWeek = weekNum);
+                            }
+                          },
+                        ),
+                      );
+                    }),
+                  ),
                 ),
                 const SizedBox(height: 12),
 
