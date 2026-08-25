@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../services/auth_state_notifier.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import '../../widgets/bottom_nav_bar.dart';
 
-/// Dark-mode Profile Screen showing user account details, editable profile, and sign-out option.
+/// Dark-mode Profile Screen showing user account details, editable profile with photo gallery picker, and sign-out option.
 class ProfileScreen extends StatelessWidget {
   final AuthStateNotifier? authNotifier;
   final bool showBottomNav;
@@ -86,14 +89,14 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        // Avatar Circle with Google Photo / Custom Avatar Fallback
+                        // Avatar Circle with Photo Gallery Picker trigger
                         GestureDetector(
-                          onTap: () => _showEditProfileDialog(context),
+                          onTap: () => _pickProfileImageFromGallery(context),
                           child: Stack(
                             children: [
                               Container(
-                                width: 68,
-                                height: 68,
+                                width: 72,
+                                height: 72,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: const LinearGradient(
@@ -110,43 +113,27 @@ class ProfileScreen extends StatelessWidget {
                                   ],
                                 ),
                                 child: ClipOval(
-                                  child: photoUrl != null && photoUrl.startsWith('http')
-                                      ? Image.network(
-                                          photoUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Center(
-                                            child: Text(
-                                              displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                                              style: AppTypography.titleLarge.copyWith(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w900,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      : Center(
-                                          child: Text(
-                                            displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                                            style: AppTypography.titleLarge.copyWith(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          ),
-                                        ),
+                                  child: _buildAvatarWidget(photoUrl, displayName),
                                 ),
                               ),
                               Positioned(
                                 right: 0,
                                 bottom: 0,
                                 child: Container(
-                                  width: 22,
-                                  height: 22,
+                                  width: 24,
+                                  height: 24,
                                   decoration: BoxDecoration(
                                     color: AppColors.primaryTeal,
                                     shape: BoxShape.circle,
                                     border: Border.all(color: AppColors.backgroundStart, width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primaryTeal.withValues(alpha: 0.4),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
                                   ),
-                                  child: const Icon(Icons.edit, size: 12, color: AppColors.backgroundStart),
+                                  child: const Icon(Icons.photo_camera_rounded, size: 13, color: AppColors.backgroundStart),
                                 ),
                               ),
                             ],
@@ -276,6 +263,39 @@ class ProfileScreen extends StatelessWidget {
     return buildBody(context);
   }
 
+  Widget _buildAvatarWidget(String? photoUrl, String displayName) {
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      if (photoUrl.startsWith('http')) {
+        return Image.network(
+          photoUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildFallbackInitial(displayName),
+        );
+      }
+      final file = File(photoUrl);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildFallbackInitial(displayName),
+        );
+      }
+    }
+    return _buildFallbackInitial(displayName);
+  }
+
+  Widget _buildFallbackInitial(String displayName) {
+    return Center(
+      child: Text(
+        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+        style: AppTypography.titleLarge.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
   Widget _buildInfoTile({
     required IconData icon,
     required String title,
@@ -322,10 +342,43 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _pickProfileImageFromGallery(BuildContext context) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final fileName = 'profile_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final savedImage = await File(pickedFile.path).copy('${appDir.path}/$fileName');
+
+        if (authNotifier != null) {
+          await authNotifier!.updateUserProfile(photoUrl: savedImage.path);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Profile picture updated from photos! ✨'),
+                backgroundColor: AppColors.primaryTeal,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[KleenAI Profile] Error picking photo from gallery: $e');
+    }
+  }
+
   void _showEditProfileDialog(BuildContext context) {
     if (authNotifier == null) return;
     final nameController = TextEditingController(text: authNotifier?.currentUser?.effectiveDisplayName);
-    final photoController = TextEditingController(text: authNotifier?.currentUser?.photoUrl);
 
     showDialog(
       context: context,
@@ -354,28 +407,36 @@ class ProfileScreen extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Photo Gallery Pick Action Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryTeal.withValues(alpha: 0.15),
+                    foregroundColor: AppColors.primaryTeal,
+                    side: const BorderSide(color: AppColors.primaryTeal, width: 1.2),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.photo_library_rounded, size: 20),
+                  label: const Text(
+                    'Choose Photo from Library',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _pickProfileImageFromGallery(context);
+                  },
+                ),
+              ),
+              const SizedBox(height: 18),
               TextField(
                 controller: nameController,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Display Name',
-                  labelStyle: const TextStyle(color: AppColors.textSecondary),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.borderWhite.withValues(alpha: 0.2)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.primaryTeal),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: photoController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Profile Picture URL',
                   labelStyle: const TextStyle(color: AppColors.textSecondary),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -409,13 +470,9 @@ class ProfileScreen extends StatelessWidget {
               ),
               onPressed: () async {
                 final newName = nameController.text.trim();
-                final newPhoto = photoController.text.trim();
                 Navigator.of(ctx).pop();
-                if (authNotifier != null) {
-                  await authNotifier!.updateUserProfile(
-                    displayName: newName.isNotEmpty ? newName : null,
-                    photoUrl: newPhoto.isNotEmpty ? newPhoto : null,
-                  );
+                if (authNotifier != null && newName.isNotEmpty) {
+                  await authNotifier!.updateUserProfile(displayName: newName);
                 }
               },
               child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../theme/app_typography.dart';
 import '../../../widgets/icon_badge.dart';
@@ -12,6 +13,49 @@ class HeaderSection extends StatelessWidget {
     this.displayName = 'User',
     this.photoUrl,
   });
+
+  Widget _buildAvatarWidget() {
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      if (photoUrl!.startsWith('http')) {
+        return Image.network(
+          photoUrl!,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildFallbackText(),
+        );
+      }
+      final file = File(photoUrl!);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildFallbackText(),
+        );
+      }
+    }
+    return Image.asset(
+      'assets/images/logo.png',
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => const Center(
+        child: Icon(
+          Icons.auto_awesome,
+          color: AppColors.primaryTeal,
+          size: 20,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackText() {
+    return Center(
+      child: Text(
+        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+        style: AppTypography.titleMedium.copyWith(
+          color: AppColors.primaryTeal,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,31 +83,7 @@ class HeaderSection extends StatelessWidget {
                   ],
                 ),
                 child: ClipOval(
-                  child: photoUrl != null && photoUrl!.startsWith('http')
-                      ? Image.network(
-                          photoUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Center(
-                            child: Text(
-                              displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                              style: AppTypography.titleMedium.copyWith(
-                                color: AppColors.primaryTeal,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        )
-                      : Image.asset(
-                          'assets/images/logo.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const Center(
-                            child: Icon(
-                              Icons.auto_awesome,
-                              color: AppColors.primaryTeal,
-                              size: 20,
-                            ),
-                          ),
-                        ),
+                  child: _buildAvatarWidget(),
                 ),
               ),
               const SizedBox(width: 10),
