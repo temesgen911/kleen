@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # Gemini AI Key for intelligent plan calculation
     GEMINI_API_KEY: Optional[str] = None
 
+    # Vision Model Settings
+    VISION_DETECTION_THRESHOLD: float = 0.35
+    VISION_MODEL_ID: str = "IDEA-Research/grounding-dino-tiny"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
