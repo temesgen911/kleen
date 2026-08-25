@@ -159,7 +159,18 @@ class AuthService {
         debugPrint('[KleenAI Auth] ✅ Firebase Apple Sign-In SUCCESS! UID: ${userCred.user?.uid}, Email: ${userCred.user?.email}');
         return userCred;
       } catch (e, stack) {
-        debugPrint('[KleenAI Auth] ❌ Apple Sign-In Error: $e\n$stack');
+        debugPrint('[KleenAI Auth] ⚠️ Apple Sign-In Exception: $e');
+        // iOS Simulator error 1000 occurs when no Apple ID is logged into Simulator Settings.
+        // Fall back gracefully to mock user in debug mode so testing is not blocked.
+        if (kDebugMode && (e.toString().contains('1000') || e.toString().contains('AuthorizationError'))) {
+          debugPrint('[KleenAI Auth] ℹ️ iOS Simulator Apple ID not configured. Using debug mock fallback (apple.cleaner@example.com)...');
+          _mockCurrentUser = createMockUser(
+            email: 'apple.cleaner@example.com',
+            displayName: 'Apple Cleaner',
+          );
+          _fallbackAuthStateController.add(_mockCurrentUser);
+          return _MockUserCredential(_mockCurrentUser!);
+        }
         rethrow;
       }
     }
