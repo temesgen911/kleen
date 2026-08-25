@@ -21,8 +21,8 @@ class HeaderSection extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.glassTeal,
@@ -31,8 +31,8 @@ class HeaderSection extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryTeal.withValues(alpha: 0.25),
-                      blurRadius: 16,
+                      color: AppColors.primaryTeal.withValues(alpha: 0.2),
+                      blurRadius: 10,
                     ),
                   ],
                 ),
@@ -44,25 +44,37 @@ class HeaderSection extends StatelessWidget {
                       child: Icon(
                         Icons.auto_awesome,
                         color: AppColors.primaryTeal,
-                        size: 28,
+                        size: 20,
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Good morning,\n$displayName ✨',
-                      style: AppTypography.greeting,
+                      'Good morning, $displayName ✨',
+                      style: AppTypography.greeting.copyWith(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 1),
                     Text(
                       'AI cleaning assistant',
-                      style: AppTypography.bodySmall,
+                      style: AppTypography.bodySmall.copyWith(
+                        fontSize: 10.5,
+                        color: AppColors.textSecondary.withValues(alpha: 0.75),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -70,21 +82,21 @@ class HeaderSection extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Stack(
           children: [
             const IconBadge(
               icon: Icons.notifications_none,
-              size: 48,
+              size: 40,
               iconColor: Colors.white,
               backgroundColor: AppColors.glassWhite,
             ),
             Positioned(
-              right: 12,
-              top: 12,
+              right: 10,
+              top: 10,
               child: Container(
-                width: 8,
-                height: 8,
+                width: 7,
+                height: 7,
                 decoration: const BoxDecoration(
                   color: AppColors.primaryTeal,
                   shape: BoxShape.circle,

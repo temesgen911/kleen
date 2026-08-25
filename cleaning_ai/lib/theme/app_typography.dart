@@ -4,10 +4,10 @@ import 'app_colors.dart';
 
 class AppTypography {
   static TextStyle get greeting => GoogleFonts.playfairDisplay(
-        fontSize: 32,
-        fontWeight: FontWeight.w500,
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
-        height: 1.2,
+        height: 1.25,
       );
 
   static TextStyle get heading1 => GoogleFonts.manrope(
