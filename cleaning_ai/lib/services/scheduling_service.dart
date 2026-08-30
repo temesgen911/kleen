@@ -2,6 +2,8 @@ import '../models/cleaning_plan.dart';
 import '../models/cleaning_requirement.dart';
 import '../models/confirmed_item.dart';
 import '../models/scanner_session.dart' show ReviewItem;
+import 'local_db_service.dart';
+import 'notification_service.dart';
 
 /// Contract for the scheduling engine that generates, balances, and adapts weekly cleaning plans.
 abstract class SchedulingService {
@@ -63,7 +65,17 @@ class MockSchedulingService implements SchedulingService {
       );
     }
 
-    return CleaningPlan(tasks: tasks);
+    final plan = CleaningPlan(tasks: tasks);
+
+    // Persist tasks locally and schedule push notifications
+    try {
+      await LocalDbService.instance.saveTasks(tasks);
+      for (final t in tasks) {
+        NotificationService.instance.scheduleTaskNotification(t);
+      }
+    } catch (_) {}
+
+    return plan;
   }
 
   static String _defaultActionFor(String name) {

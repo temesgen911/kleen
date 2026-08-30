@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cleaning_streak.dart';
+import 'local_db_service.dart';
 
 /// Storage service for persisting cleaning streaks across app launches.
 class StreakStorage {
@@ -9,17 +10,22 @@ class StreakStorage {
   /// Saves the current streak to local storage.
   static Future<void> saveStreak(CleaningStreak streak) async {
     try {
+      await LocalDbService.instance.saveStreak(streak);
       final prefs = await SharedPreferences.getInstance();
       final jsonString = jsonEncode(streak.toJson());
       await prefs.setString(_keyStreak, jsonString);
     } catch (e) {
-      // Fallback silently if storage unavailable
+      // Fallback silently
     }
   }
 
   /// Loads the saved streak from local storage, or returns initial if not found.
   static Future<CleaningStreak> loadStreak() async {
     try {
+      final streak = await LocalDbService.instance.loadStreak();
+      if (streak.currentStreak > 0 || streak.totalCompletedDays > 0) {
+        return streak;
+      }
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_keyStreak);
       if (jsonString != null && jsonString.isNotEmpty) {

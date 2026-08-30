@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'screens/splash/splash_screen.dart';
+import 'services/notification_service.dart';
+import 'services/sync_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -13,6 +15,9 @@ void main() async {
         options: DefaultFirebaseOptions.currentPlatform,
       );
     }
+    // Initialize background services
+    await NotificationService.instance.initialize();
+    SyncService.instance.initialize();
   } catch (_) {
     // App will use resilient fallback if offline or in test binding
   }

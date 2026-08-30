@@ -11,6 +11,7 @@ class ReviewItemRow extends StatelessWidget {
   final String frequency;
   final bool isConfirmed;
   final VoidCallback onToggle;
+  final VoidCallback? onEdit;
   final Color categoryAccent;
 
   const ReviewItemRow({
@@ -21,6 +22,7 @@ class ReviewItemRow extends StatelessWidget {
     required this.frequency,
     required this.isConfirmed,
     required this.onToggle,
+    this.onEdit,
     required this.categoryAccent,
   });
 
@@ -123,6 +125,17 @@ class ReviewItemRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
+
+            // Edit button
+            if (onEdit != null)
+              IconButton(
+                icon: Icon(Icons.edit_outlined, size: 18, color: Colors.white.withValues(alpha: 0.5)),
+                onPressed: onEdit,
+                splashRadius: 18,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            if (onEdit != null) const SizedBox(width: 6),
 
             // Confirmation toggle
             GestureDetector(

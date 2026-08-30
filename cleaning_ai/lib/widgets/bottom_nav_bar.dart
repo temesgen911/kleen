@@ -4,6 +4,7 @@ import '../screens/home/home_screen.dart';
 import '../screens/plan/weekly_plan_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/scan/scanner_screen.dart';
+import '../screens/scan/voice_input_screen.dart';
 import '../services/auth_state_notifier.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -94,8 +95,8 @@ class BottomNavBar extends StatelessWidget {
         );
         return;
       case 1:
-        targetScreen = const ScannerScreen();
-        break;
+        _showScanChoiceSheet(context);
+        return;
       case 2:
         targetScreen = const WeeklyPlanScreen(isManagementMode: true);
         break;
@@ -109,6 +110,79 @@ class BottomNavBar extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => targetScreen),
+    );
+  }
+
+  void _showScanChoiceSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF141927),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'How would you like to add tasks?',
+                style: AppTypography.heading2.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryTeal.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt, color: AppColors.primaryTeal),
+                ),
+                title: Text('Camera Scan Rooms', style: AppTypography.heading3.copyWith(fontSize: 15)),
+                subtitle: Text('Take photos of your rooms & surfaces for AI detection', style: AppTypography.bodySmall),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ScannerScreen()),
+                  );
+                },
+              ),
+              const Divider(color: Colors.white10),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryPurple.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.mic, color: AppColors.secondaryPurple),
+                ),
+                title: Text('Voice AI Setup', style: AppTypography.heading3.copyWith(fontSize: 15)),
+                subtitle: Text('Speak out loud everything to be cleaned & let AI format tasks', style: AppTypography.bodySmall),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const VoiceInputScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

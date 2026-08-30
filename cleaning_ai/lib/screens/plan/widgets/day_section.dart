@@ -10,6 +10,7 @@ class DaySection extends StatelessWidget {
   final Function(String taskId, WeekDay newDay, {int? insertIndex})
       onTaskDropped;
   final Function(String taskId) onTaskDeleted;
+  final Function(PlanTask task)? onTaskEdited;
 
   const DaySection({
     super.key,
@@ -17,6 +18,7 @@ class DaySection extends StatelessWidget {
     required this.tasks,
     required this.onTaskDropped,
     required this.onTaskDeleted,
+    this.onTaskEdited,
   });
 
   @override
@@ -133,6 +135,7 @@ class DaySection extends StatelessWidget {
                         return PlanTaskCard(
                           task: task,
                           onDelete: () => onTaskDeleted(task.id),
+                          onEdit: onTaskEdited != null ? () => onTaskEdited!(task) : null,
                         );
                       },
                     ),

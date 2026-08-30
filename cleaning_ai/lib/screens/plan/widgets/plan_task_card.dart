@@ -7,12 +7,14 @@ import '../../../../models/scanner_session.dart';
 class PlanTaskCard extends StatelessWidget {
   final PlanTask task;
   final VoidCallback onDelete;
+  final VoidCallback? onEdit;
   final bool isDragging;
 
   const PlanTaskCard({
     super.key,
     required this.task,
     required this.onDelete,
+    this.onEdit,
     this.isDragging = false,
   });
 
@@ -203,6 +205,17 @@ class PlanTaskCard extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // Edit Action
+              if (onEdit != null)
+                IconButton(
+                  icon: Icon(Icons.edit_outlined,
+                      color: Colors.white.withValues(alpha: 0.45), size: 16),
+                  onPressed: onEdit,
+                  splashRadius: 18,
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(),
+                ),
 
               // Delete Action
               IconButton(

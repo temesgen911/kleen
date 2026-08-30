@@ -7,6 +7,8 @@ import '../../../models/scanner_session.dart';
 import '../scan/scanner_screen.dart';
 import 'widgets/day_section.dart';
 import 'widgets/plan_success_dialog.dart';
+import 'widgets/task_edit_sheet.dart';
+import '../../services/local_db_service.dart';
 
 class WeeklyPlanScreen extends StatefulWidget {
   final ScannerSession? session;
@@ -61,6 +63,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
 
     final deletedTask = _plan.tasks[taskIndex];
     _plan.removeTask(taskId);
+    LocalDbService.instance.deleteTask(taskId);
 
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -77,10 +80,37 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
           textColor: AppColors.secondaryPurple,
           onPressed: () {
             _plan.addTask(deletedTask);
+            LocalDbService.instance.saveSingleTask(deletedTask);
           },
         ),
         duration: const Duration(seconds: 4),
       ),
+    );
+  }
+
+  void _handleTaskEdited(PlanTask task) {
+    TaskEditSheet.show(
+      context,
+      existingTask: task,
+      onSaveTask: (updatedTask) {
+        final idx = _plan.tasks.indexWhere((t) => t.id == task.id);
+        if (idx != -1) {
+          _plan.tasks[idx] = updatedTask;
+          _plan.notifyListeners();
+          LocalDbService.instance.saveSingleTask(updatedTask);
+        }
+      },
+      onDelete: () => _handleTaskDeleted(task.id),
+    );
+  }
+
+  void _handleAddTask() {
+    TaskEditSheet.show(
+      context,
+      onSaveTask: (newTask) {
+        _plan.addTask(newTask);
+        LocalDbService.instance.saveSingleTask(newTask);
+      },
     );
   }
 
@@ -163,6 +193,13 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundStart,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _handleAddTask,
+        backgroundColor: AppColors.primaryTeal,
+        foregroundColor: AppColors.backgroundStart,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Activity', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -181,6 +218,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
                         tasks: _plan.getTasksForDay(day, weekNumber: _selectedWeek),
                         onTaskDropped: _handleTaskDropped,
                         onTaskDeleted: _handleTaskDeleted,
+                        onTaskEdited: _handleTaskEdited,
                       );
                     }).toList(),
                   ),

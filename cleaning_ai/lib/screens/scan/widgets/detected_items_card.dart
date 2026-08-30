@@ -5,6 +5,7 @@ import '../../../../theme/app_typography.dart';
 import '../../../../models/scanner_session.dart';
 import 'review_item_row.dart';
 import 'add_item_sheet.dart';
+import '../../plan/widgets/task_edit_sheet.dart';
 
 /// The large glass card that shows all detected items grouped by category and filtered by room.
 class DetectedItemsCard extends StatefulWidget {
@@ -52,16 +53,15 @@ class _DetectedItemsCardState extends State<DetectedItemsCard> {
   }
 
   void _openAddItem() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => AddItemSheet(
-        onAdd: (item) {
-          setState(() => widget.session.addItem(item));
-          widget.onSessionChanged();
-        },
-      ),
+    TaskEditSheet.show(
+      context,
+      defaultRoom: _selectedRoom == 'All' ? 'Living Room' : _selectedRoom,
+      onSaveTask: (task) {
+        setState(() {
+          widget.session.addItem(task.sourceItem);
+        });
+        widget.onSessionChanged();
+      },
     );
   }
 
@@ -257,6 +257,27 @@ class _DetectedItemsCardState extends State<DetectedItemsCard> {
                   setState(() => widget.session.toggleConfirmed(id));
                   widget.onSessionChanged();
                 },
+                onEditItem: (item) {
+                  TaskEditSheet.show(
+                    context,
+                    existingItem: item,
+                    onSaveTask: (updatedTask) {
+                      setState(() {
+                        final idx = widget.session.reviewItems.indexWhere((i) => i.id == item.id);
+                        if (idx != -1) {
+                          widget.session.reviewItems[idx] = updatedTask.sourceItem;
+                        }
+                      });
+                      widget.onSessionChanged();
+                    },
+                    onDelete: () {
+                      setState(() {
+                        widget.session.reviewItems.removeWhere((i) => i.id == item.id);
+                      });
+                      widget.onSessionChanged();
+                    },
+                  );
+                },
               );
             }),
 
@@ -344,6 +365,7 @@ class _CategorySection extends StatelessWidget {
   final List<ReviewItem> items;
   final bool editMode;
   final Function(String) onToggle;
+  final Function(ReviewItem)? onEditItem;
 
   const _CategorySection({
     required this.category,
@@ -352,6 +374,7 @@ class _CategorySection extends StatelessWidget {
     required this.items,
     required this.editMode,
     required this.onToggle,
+    this.onEditItem,
   });
 
   @override
@@ -386,6 +409,7 @@ class _CategorySection extends StatelessWidget {
               isConfirmed: item.isConfirmed,
               categoryAccent: accent,
               onToggle: () => onToggle(item.id),
+              onEdit: onEditItem != null ? () => onEditItem!(item) : null,
             )),
       ],
     );
