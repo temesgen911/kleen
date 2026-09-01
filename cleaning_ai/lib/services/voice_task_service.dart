@@ -3,7 +3,33 @@ import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../models/scanner_session.dart';
-import '../models/task_frequency.dart';
+
+class RoomVoiceBubble {
+  final String id;
+  String roomTitle;
+  String transcript;
+  final DateTime recordedAt;
+
+  RoomVoiceBubble({
+    String? id,
+    required this.roomTitle,
+    required this.transcript,
+    DateTime? recordedAt,
+  })  : id = id ?? 'voice_bubble_${DateTime.now().microsecondsSinceEpoch}',
+        recordedAt = recordedAt ?? DateTime.now();
+
+  RoomVoiceBubble copyWith({
+    String? roomTitle,
+    String? transcript,
+  }) {
+    return RoomVoiceBubble(
+      id: id,
+      roomTitle: roomTitle ?? this.roomTitle,
+      transcript: transcript ?? this.transcript,
+      recordedAt: recordedAt,
+    );
+  }
+}
 
 class VoiceTaskService {
   static final VoiceTaskService instance = VoiceTaskService._internal();
@@ -43,7 +69,7 @@ class VoiceTaskService {
         onResult(result.recognizedWords);
       },
       listenFor: const Duration(seconds: 45),
-      pauseFor: const Duration(seconds: 4),
+      pauseFor: const Duration(seconds: 5),
       localeId: 'en_US',
     );
   }
@@ -52,28 +78,46 @@ class VoiceTaskService {
     await _speech.stop();
   }
 
-  /// Parses voice transcript into structured cleaning items using Gemini AI or structured NLP parser.
-  Future<List<ReviewItem>> parseSpeechToTasks(String transcript, {String? apiKey}) async {
-    if (transcript.trim().isEmpty) return [];
+  /// Parses multiple room voice transcripts into structured cleaning items using Gemini AI or Smart Local NLP.
+  Future<List<ReviewItem>> parseMultiRoomTranscripts(
+    List<RoomVoiceBubble> roomBubbles, {
+    String? apiKey,
+  }) async {
+    final validBubbles = roomBubbles.where((b) => b.transcript.trim().isNotEmpty).toList();
+    if (validBubbles.isEmpty) return [];
 
     if (apiKey != null && apiKey.isNotEmpty) {
       try {
         final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: apiKey);
+
+        final StringBuffer inputBuffer = StringBuffer();
+        for (int i = 0; i < validBubbles.length; i++) {
+          inputBuffer.writeln('Room ${i + 1} (${validBubbles[i].roomTitle}): "${validBubbles[i].transcript}"');
+        }
+
         final prompt = '''
-You are KleenAI, an expert cleaning assistant. Parse the following voice description into a JSON array of cleaning tasks.
-Return ONLY raw JSON with this exact structure for each task:
+You are KleenAI, an expert cleaning assistant. Parse the following voice descriptions spoken across multiple rooms into a JSON array of cleaning tasks.
+For each item mentioned (e.g. king bed, glass window, TV, rug, coffee table, counter, sink):
+1. Extract or infer the room name (e.g. Master Bedroom, Living Room, Kitchen, Bathroom).
+2. Assign an appropriate cleaning action (e.g., Wipe, Vacuum, Dust, Mop, Clean, Wash).
+3. Assign a realistic frequency (one of: "Daily", "2x / Week", "Weekly", "Bi-Weekly", "Monthly").
+4. Assign an estimated duration in minutes (integer between 2 and 45).
+5. Assign category (one of: "surfaces", "furniture", "electronics", "other").
+
+Return ONLY raw JSON with this exact array structure:
 [
   {
-    "name": "Coffee Table",
-    "roomName": "Living Room",
-    "category": "surfaces",
-    "cleaningAction": "Wipe",
-    "frequency": "Weekly"
+    "name": "King Bed",
+    "roomName": "Bedroom",
+    "category": "furniture",
+    "cleaningAction": "Make Bed & Tidy",
+    "frequency": "Weekly",
+    "estimatedMinutes": 10
   }
 ]
 
-Categories must be one of: "surfaces", "furniture", "electronics", "other".
-Voice description: "$transcript"
+Voice descriptions:
+${inputBuffer.toString()}
 ''';
 
         final response = await model.generateContent([Content.text(prompt)]);
@@ -84,9 +128,9 @@ Voice description: "$transcript"
 
           return parsedList.map((item) {
             return ReviewItem(
-              id: 'voice_${DateTime.now().microsecondsSinceEpoch}',
+              id: 'voice_${DateTime.now().microsecondsSinceEpoch}_${item['name']}',
               name: item['name'] as String? ?? 'Clean Area',
-              roomName: item['roomName'] as String? ?? 'Living Room',
+              roomName: item['roomName'] as String? ?? 'Room',
               category: _parseCategory(item['category'] as String?),
               cleaningAction: item['cleaningAction'] as String? ?? 'Wipe',
               frequency: item['frequency'] as String? ?? 'Weekly',
@@ -95,12 +139,25 @@ Voice description: "$transcript"
           }).toList();
         }
       } catch (e) {
-        debugPrint('[VoiceTaskService] Gemini API parsing notice: $e. Using local smart NLP parser.');
+        debugPrint('[VoiceTaskService] Gemini API multi-room parsing notice: $e. Using local smart NLP parser.');
       }
     }
 
-    // Fallback Smart Local NLP parser
-    return _smartLocalParse(transcript);
+    // Fallback Smart Local NLP parser for multi-room voice bubbles
+    final List<ReviewItem> allItems = [];
+    for (final bubble in validBubbles) {
+      final items = _smartLocalParse(bubble.transcript, defaultRoom: bubble.roomTitle);
+      allItems.addAll(items);
+    }
+    return allItems;
+  }
+
+  /// Single transcript parser bridge
+  Future<List<ReviewItem>> parseSpeechToTasks(String transcript, {String? apiKey}) async {
+    return parseMultiRoomTranscripts(
+      [RoomVoiceBubble(roomTitle: 'Room 1', transcript: transcript)],
+      apiKey: apiKey,
+    );
   }
 
   ItemCategory _parseCategory(String? catStr) {
@@ -117,30 +174,31 @@ Voice description: "$transcript"
     }
   }
 
-  List<ReviewItem> _smartLocalParse(String transcript) {
+  List<ReviewItem> _smartLocalParse(String transcript, {String defaultRoom = 'Living Room'}) {
     final List<ReviewItem> items = [];
     final lower = transcript.toLowerCase();
 
     // Split speech by conjunctions / sentences
-    final phrases = lower.split(RegExp(r'(\b(and|also|then|after that|plus)\b|[.,;\n])'));
+    final phrases = lower.split(RegExp(r'(\b(and|also|then|after that|plus|with a|and a|there is a|there are)\b|[.,;\n])'));
 
     for (var phrase in phrases) {
       final text = phrase.trim();
       if (text.length < 3) continue;
 
-      String room = 'Living Room';
+      String room = defaultRoom;
       if (text.contains('bathroom')) room = 'Bathroom';
       if (text.contains('kitchen')) room = 'Kitchen';
       if (text.contains('bedroom')) room = 'Bedroom';
       if (text.contains('dining')) room = 'Dining Room';
+      if (text.contains('living')) room = 'Living Room';
       if (text.contains('hallway')) room = 'Hallway';
 
       String action = 'Wipe';
-      if (text.contains('vacuum') || text.contains('hoover')) action = 'Vacuum';
-      if (text.contains('mop')) action = 'Mop';
-      if (text.contains('dust')) action = 'Dust';
+      if (text.contains('vacuum') || text.contains('hoover') || text.contains('rug') || text.contains('carpet')) action = 'Vacuum';
+      if (text.contains('mop') || text.contains('floor')) action = 'Mop';
+      if (text.contains('dust') || text.contains('tv') || text.contains('window')) action = 'Dust & Wipe';
+      if (text.contains('bed')) action = 'Make Bed & Tidy';
       if (text.contains('scrub') || text.contains('deep clean')) action = 'Scrub';
-      if (text.contains('wash')) action = 'Wash';
 
       String freq = 'Weekly';
       if (text.contains('daily') || text.contains('every day')) freq = 'Daily';
@@ -150,8 +208,8 @@ Voice description: "$transcript"
 
       // Extract subject item
       String itemName = text
-          .replaceAll(RegExp(r'\b(clean|vacuum|mop|dust|wipe|scrub|wash|every|daily|weekly|monthly|the|a|an|in|the|my|our)\b'), '')
-          .replaceAll(RegExp(r'\b(bathroom|kitchen|bedroom|living room|dining room)\b'), '')
+          .replaceAll(RegExp(r'\b(clean|vacuum|mop|dust|wipe|scrub|wash|every|daily|weekly|monthly|the|a|an|in|my|our|there|is|are|has|have|see|i|saw|here|also)\b'), '')
+          .replaceAll(RegExp(r'\b(bathroom|kitchen|bedroom|living room|dining room|hallway|room)\b'), '')
           .trim();
 
       if (itemName.isEmpty) {
@@ -178,7 +236,7 @@ Voice description: "$transcript"
         ReviewItem(
           id: 'voice_${DateTime.now().microsecondsSinceEpoch}',
           name: 'General Room Cleaning',
-          roomName: 'Living Room',
+          roomName: defaultRoom,
           category: ItemCategory.surfaces,
           cleaningAction: 'Tidy & Wipe',
           frequency: 'Weekly',
@@ -194,7 +252,7 @@ Voice description: "$transcript"
     final n = name.toLowerCase();
     if (n.contains('tv') || n.contains('screen') || n.contains('computer') || n.contains('lamp')) return ItemCategory.electronics;
     if (n.contains('sofa') || n.contains('couch') || n.contains('chair') || n.contains('bed') || n.contains('table')) return ItemCategory.furniture;
-    if (n.contains('floor') || n.contains('counter') || n.contains('window') || n.contains('mirror') || n.contains('sink')) return ItemCategory.surfaces;
+    if (n.contains('floor') || n.contains('counter') || n.contains('window') || n.contains('mirror') || n.contains('sink') || n.contains('rug')) return ItemCategory.surfaces;
     return ItemCategory.other;
   }
 }

@@ -4,7 +4,7 @@ import '../screens/home/home_screen.dart';
 import '../screens/plan/weekly_plan_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/scan/scanner_screen.dart';
-import '../screens/scan/voice_input_screen.dart';
+import '../screens/scan/voice_room_setup_screen.dart';
 import '../services/auth_state_notifier.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
@@ -95,8 +95,8 @@ class BottomNavBar extends StatelessWidget {
         );
         return;
       case 1:
-        _showScanChoiceSheet(context);
-        return;
+        targetScreen = const VoiceRoomSetupScreen();
+        break;
       case 2:
         targetScreen = const WeeklyPlanScreen(isManagementMode: true);
         break;
