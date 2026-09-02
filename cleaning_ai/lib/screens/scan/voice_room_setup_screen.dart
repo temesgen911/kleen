@@ -434,7 +434,7 @@ class _VoiceRoomSetupScreenState extends State<VoiceRoomSetupScreen>
                             ],
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Room Title & Action Buttons
                               Row(
@@ -462,7 +462,6 @@ class _VoiceRoomSetupScreenState extends State<VoiceRoomSetupScreen>
                                       IconButton(
                                         icon: const Icon(Icons.edit, size: 18, color: AppColors.textSecondary),
                                         onPressed: () => _editBubbleTranscript(index),
-                                        dense: true,
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
                                       ),
@@ -470,7 +469,6 @@ class _VoiceRoomSetupScreenState extends State<VoiceRoomSetupScreen>
                                       IconButton(
                                         icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
                                         onPressed: () => _deleteBubble(index),
-                                        dense: true,
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
                                       ),
@@ -489,7 +487,7 @@ class _VoiceRoomSetupScreenState extends State<VoiceRoomSetupScreen>
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
-                                  crossAxisAlignment: CrossAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Icon(Icons.graphic_eq, size: 18, color: AppColors.secondaryPurple),
                                     const SizedBox(width: 10),
